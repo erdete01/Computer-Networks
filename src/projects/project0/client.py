@@ -9,14 +9,12 @@ PORT = 4300
 
 def format(message: list) -> bytes:
     """Convert (encode) the message to bytes"""
-    # TODO: Implement this function
-    raise NotImplementedError
+    return f"Hello, my name is {' '.join(message)}".encode()
 
 
 def parse(data: bytes) -> str:
     """Convert (decode) bytes to a string"""
-    # TODO: Implement this function
-    raise NotImplementedError
+    return data.decode()
 
 
 def client_loop(name: str):
@@ -41,6 +39,9 @@ def main():
     arg_parser = argparse.ArgumentParser(description="Enable debugging")
     arg_parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable logging.DEBUG mode"
+    )
+    arg_parser.add_argument(
+        "name", type=str, nargs="+", help="name"
     )
     # TODO: Add an argparse argument that gathers 1 or more command-line arguments into a list.
     # This will be the name passed to the client
