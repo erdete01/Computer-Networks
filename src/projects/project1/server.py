@@ -10,7 +10,6 @@ import csv
 HOST = "127.0.0.1"
 PORT = 4300
 
-
 def read_file(filename: str) -> Tuple[dict, int]:
     """Read the world countries and their capitals from the file
     Return the tuple of (dictionary, count) where
@@ -18,18 +17,28 @@ def read_file(filename: str) -> Tuple[dict, int]:
     `count` is the number of countries in the world
     Make sure not to count United States of America and USA as two different countries
     """
-    filename = "world.csv"
+    # Please comment out filename when testing both client and server
+    # filename = "world.csv"
     with open(filename, "r") as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         myTuple = []
         finalTuple = ()
+        myDict = {}
         count = 0
         for row in reader:
             count += 1
             myTuple.append(row)     
         mappingDictionary = {sub["Country"] : sub["Capital"] for sub in myTuple}
+        for key, value in mappingDictionary.items():
+            if "," in key:
+                country_list = key.split(", ")
+                for i in country_list:
+                    myDict[i] = value
+            else:
+                myDict[key] = value
+
         finalTuple = list(finalTuple)
-        finalTuple.append(mappingDictionary)
+        finalTuple.append(myDict)
         finalTuple = tuple((finalTuple))
         finalTuple = ( finalTuple  + (count, ))
         return finalTuple
@@ -53,7 +62,6 @@ def find_capital(world: dict, country: str) -> str:
     else: 
         return ("No such country.")
 
-
 def format(message: str) -> bytes:
     """Convert (encode) the message to bytes"""
     return message.encode()
@@ -68,6 +76,7 @@ def server_loop(world: dict):
     print("The server has started")
     # DGRAM or use STREAM is more reliable. DBGRAM is unreliable
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        
         sock.bind((HOST, PORT))
         while True:
             msg, client = sock.recvfrom(2048)
@@ -78,6 +87,7 @@ def server_loop(world: dict):
             sock.sendto(format(find_capital(world,msg)), client)
 
         sock.close()
+        
     print("The server has finished")
 
 
