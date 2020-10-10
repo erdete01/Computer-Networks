@@ -18,7 +18,7 @@ def read_file(filename: str) -> Tuple[dict, int]:
     `count` is the number of countries in the world
     Make sure not to count United States of America and USA as two different countries
     """
-    # filename = "world.csv"
+    filename = "world.csv"
     with open(filename, "r") as csvfile:
         reader = csv.DictReader(csvfile, delimiter=';')
         myTuple = []
@@ -68,9 +68,16 @@ def server_loop(world: dict):
     print("The server has started")
     # DGRAM or use STREAM is more reliable. DBGRAM is unreliable
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        raise NotImplementedError
-        # Here I should bind them together.
-        # sock.listen()
+        sock.bind((HOST, PORT))
+        while True:
+            msg, client = sock.recvfrom(2048)
+            msg = msg.decode()
+            if msg == "bye":
+                break
+            print(f"Received {msg}")
+            sock.sendto(format(find_capital(world,msg)), client)
+
+        sock.close()
     print("The server has finished")
 
 
