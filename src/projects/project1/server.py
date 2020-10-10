@@ -5,7 +5,7 @@ import logging
 import socket
 from csv import DictReader
 from typing import Tuple
-
+import csv
 
 HOST = "127.0.0.1"
 PORT = 4300
@@ -18,30 +18,59 @@ def read_file(filename: str) -> Tuple[dict, int]:
     `count` is the number of countries in the world
     Make sure not to count United States of America and USA as two different countries
     """
-    raise NotImplementedError
-
+    # filename = "world.csv"
+    with open(filename, "r") as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=';')
+        myTuple = []
+        finalTuple = ()
+        count = 0
+        for row in reader:
+            count += 1
+            myTuple.append(row)     
+        mappingDictionary = {sub["Country"] : sub["Capital"] for sub in myTuple}
+        finalTuple = list(finalTuple)
+        finalTuple.append(mappingDictionary)
+        finalTuple = tuple((finalTuple))
+        finalTuple = ( finalTuple  + (count, ))
+        return finalTuple
 
 def find_capital(world: dict, country: str) -> str:
     """Return the capital of a country if it exists
     Return *No such country* otherwise
     """
-    raise NotImplementedError
+
+    myDict = {}
+    for key, value in world.items():
+        if "," in key:
+            country_list = key.split(", ")
+            for i in country_list:
+                myDict[i] = value
+        else:
+            myDict[key] = value
+    
+    if country in myDict:
+        return (myDict.get(country))
+    else: 
+        return ("No such country.")
 
 
 def format(message: str) -> bytes:
     """Convert (encode) the message to bytes"""
-    raise NotImplementedError
+    return message.encode()
 
 
 def parse(data: bytes) -> str:
     """Convert (decode) bytes to a string"""
-    raise NotImplementedError
+    return "".join(data.decode())
 
 
 def server_loop(world: dict):
     print("The server has started")
+    # DGRAM or use STREAM is more reliable. DBGRAM is unreliable
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         raise NotImplementedError
+        # Here I should bind them together.
+        # sock.listen()
     print("The server has finished")
 
 
