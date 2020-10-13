@@ -10,7 +10,7 @@ LOGFILE = "webserver.log"
 def main():
     """Main loop"""
     with socket(AF_INET, SOCK_STREAM) as server_sock:
-        pass
+        server_sock.bind((ADDRESS, PORT))
 
 
 if __name__ == "__main__":
