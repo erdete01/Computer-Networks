@@ -4,7 +4,6 @@ import logging
 import argparse
 import time
 import datetime
-import json
 
 
 ADDRESS = "127.0.0.2"  # Local client is going to be 127.0.0.1
@@ -33,31 +32,34 @@ def server_loop():
         myDict = {}
         print("The server is ready to receive")
         while True:
-            connectionSocket, addr = server_sock.accept()
+            connectionSocket, client_address = server_sock.accept()
             request = connectionSocket.recv(1024).decode()
             if request:
-                # print(request)
                 myDict['HTTP'] = request.split( )[2]
                 myDict['server'] = "CS430-Temuulen Erdenebulgan"
                 myDict['date'] = time.asctime( time.localtime(time.time()) )
                 myDict['file'] = request.split( )[1]
                 lines = request.split( )
                 browser = lines.index('User-Agent:') + 1
-                myDict['browser'] = request.split( )[browser]
+                acceptLine = lines.index('Accept:') 
+                myBrowser= request.split( )[browser:acceptLine]
+                mystring = ""
+                for i in myBrowser:
+                    mystring += (i + " ")
+                myDict["browser"] = mystring
                 myDict["Time"] = str(datetime.datetime.now())
-                ip = lines.index('Host:') + 1
-                
-                print(request.split(":"))
-                myDict["IP"] = request.split(":")[ip]
+                myDict["IP"] = client_address[0]
                 myDict["length"] = contentLength()
                 myDict["modified"] = "Friday, August 29, 2018 11:00 AM"
                 myDict["content-type"] = "text/plain; charset=utf-8"
                 logFile(myDict)
-                # print("hello?",myDict)
-                # response = myDict['HTTP'] + "200 OK" + "\n" + "Content-Length: " + myDict["length"] + "\n" + "Content-Type: " + myDict["content-type"] +"\n" + "Date: " + myDict['date'] + '\n' + "Last-Modified: " + myDict["modified"] + "\n" + "Server: " + myDict["server"]
                 
-                connectionSocket.sendto(format("hi"), addr)
-                
+                if request.split( )[0] == "GET":
+                    response = myDict['HTTP'] + " 200 OK" + "\n" + "Content-Length: " + myDict["length"] + "\n" + "Content-Type: " + myDict["content-type"] +"\n" + "Date: " + myDict['date'] + '\n' + "Last-Modified: " + myDict["modified"] + "\n" + "Server: " + myDict["server"]
+                    connectionSocket.send(format(response))
+                elif request.split( )[0] == "POST":
+                    return connectionSocket.send(format("405 Method Not Allowed")) 
+                           
 
 def main():
     """Main loop"""
