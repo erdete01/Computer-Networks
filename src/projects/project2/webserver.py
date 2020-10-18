@@ -10,7 +10,7 @@ ADDRESS = "127.0.0.2"  # Local client is going to be 127.0.0.1
 PORT = 4300  # Open http://127.0.0.2:4300 in a browser
 LOGFILE = "webserver.log"
 
-def format(message: str) -> bytes:
+def format(message):
     """Convert (encode) the message to bytes"""
     return message.encode()
 
@@ -33,36 +33,47 @@ def server_loop():
         print("The server is ready to receive")
         while True:
             connectionSocket, client_address = server_sock.accept()
-            request = connectionSocket.recv(1024).decode()
-            if request:
-                myDict['HTTP'] = request.split( )[2]
-                myDict['server'] = "CS430-Temuulen Erdenebulgan"
-                myDict['date'] = time.asctime( time.localtime(time.time()) )
-                myDict['file'] = request.split( )[1]
-                lines = request.split( )
-                browser = lines.index('User-Agent:') + 1
-                acceptLine = lines.index('Accept:') 
-                myBrowser= request.split( )[browser:acceptLine]
-                mystring = ""
-                for i in myBrowser:
-                    mystring += (i + " ")
-                myDict["browser"] = mystring
-                myDict["Time"] = str(datetime.datetime.now())
-                myDict["IP"] = client_address[0]
-                myDict["length"] = contentLength()
-                myDict["modified"] = "Friday, August 29, 2018 11:00 AM"
-                myDict["content-type"] = "text/plain; charset=utf-8"
-                logFile(myDict)
-                
-                if request.split( )[0] == "GET":
-                    response = myDict['HTTP'] + " 200 OK" + "\n" + "Content-Length: " + myDict["length"] + "\n" + "Content-Type: " + myDict["content-type"] +"\n" + "Date: " + myDict['date'] + '\n' + "Last-Modified: " + myDict["modified"] + "\n" + "Server: " + myDict["server"]
-                    connectionSocket.send(format(response))
-                elif request.split( )[0] == "POST":
-                    return connectionSocket.send(format("405 Method Not Allowed")) 
-                           
-
+            with connectionSocket:
+                request = connectionSocket.recv(1024).decode()
+                if request:
+                    myDict['HTTP'] = (request.split( )[2] + " ")
+                    myDict['server'] = "CS430-Temuulen Erdenebulgan"
+                    myDict['date'] = time.asctime( time.localtime(time.time()) )
+                    myDict['file'] = request.split( )[1]
+                    lines = request.split( )
+                    browser = lines.index('User-Agent:') + 1
+                    acceptLine = lines.index('Accept:') 
+                    myBrowser= request.split( )[browser:acceptLine]
+                    mystring = ""
+                    for i in myBrowser:
+                        mystring += (i + " ")
+                    myDict["browser"] = mystring
+                    myDict["Time"] = str(datetime.datetime.now())
+                    myDict["IP"] = client_address[0]
+                    myDict["length"] = contentLength()
+                    myDict["modified"] = "Friday, August 29, 2018 11:00 AM"
+                    myDict["content-type"] = "text/plain; charset=utf-8"
+                    f = open('alice30.txt', 'r')
+                    file_content = f.read()
+                    myDict["alice"] = file_content
+                    f.close()
+                    logFile(myDict)
+                    if request.split( )[0] == "GET" and request.split( )[1] == '/alice30.txt':
+                        response = myDict['HTTP'] + "200" + " OK" + "\r\n" + "Content-Length: " + myDict["length"] + "\r\n" + "Content-Type: " + myDict["content-type"] +"\r\n" + "Date: " + myDict['date'] + "\r\n" + "Last-Modified: " + myDict["modified"] + "\r\n" + "Server: " + myDict["server"] + "\r\n\r\n" + myDict["alice"]
+                        connectionSocket.send(format(response))
+                    elif request.split( )[0] == "POST":
+                        response = myDict['HTTP'] + "405 Method Not Allowed" + "\r\n" + "Content-Type: " + myDict["content-type"] + "\r\n" + "Date: " + myDict['date'] + "\r\n" + "Server: " + myDict["server"] +  "\r\n\r\n" 
+                        connectionSocket.send(format(response))  
+                    elif request.split( )[0] == "HEAD":
+                        response = myDict['HTTP'] + "501 Not Implemented" + "\r\n"+ "Content-Length: " + myDict["length"] + "\r\n" + "Content-Type: " + myDict["content-type"] +"\r\n" + "Date: " + myDict['date'] + "\r\n" + "Last-Modified: " + myDict["modified"] + "\r\n"+ "Server: " + myDict["server"] + "\r\n\r\n" 
+                        connectionSocket.send(format(response)) 
+                    else:
+                        if request.split( )[1] != '/alice30.txt':
+                            response = myDict['HTTP'] + "404 Not Found" + "\r\n" + "Content-Type: " + myDict["content-type"] + "\r\n" + "Date: " + myDict['date'] + "\r\n" + "Server: " + myDict["server"] +  "\r\n\r\n" 
+                            connectionSocket.send(format(response))    
+                    
 def main():
-    """Main loop"""
+    """Main lop"""
     arg_parser = argparse.ArgumentParser(description="Enable debugging")
     arg_parser.add_argument("-f", "--file", type=str, help="File name")
     arg_parser.add_argument(
