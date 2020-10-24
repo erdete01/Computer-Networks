@@ -6,8 +6,9 @@ DNS Resolver
 import argparse
 import logging
 from random import randint, choice
-from socket import socket, SOCK_DGRAM, AF_INET
+from socket import TCP_LINGER2, socket, SOCK_DGRAM, AF_INET
 from typing import Tuple, List
+import random
 
 PORT = 53
 
@@ -32,8 +33,9 @@ def val_to_2_bytes(value: int) -> Tuple[int]:
     Split a value into 2 bytes
     Return the result as a tuple of 2 integers
     """
-    # TODO: Implement this function
-    raise NotImplementedError
+    left_value = value >> 8
+    right_value = value & 0xFF
+    return left_value, (right_value)
 
 
 def val_to_n_bytes(value: int, n_bytes: int) -> Tuple[int]:
@@ -41,14 +43,27 @@ def val_to_n_bytes(value: int, n_bytes: int) -> Tuple[int]:
     Split a value into n bytes
     Return the result as a tuple of n integers
     """
-    # TODO: Implement this function
-    raise NotImplementedError
-
+    myList = []
+    myValue = value
+    i = 1
+    while i < n_bytes:
+        myList.append(value >> i * 8 & 0xFF)
+        i += 1
+    myList = myList[::-1]
+    myList.append(myValue & 0xFF)
+    return (tuple(myList))
+    
 
 def bytes_to_val(byte_list: list) -> int:
     """Merge n bytes into a value"""
-    # TODO: Implement this function
-    raise NotImplementedError
+    i = 0
+    myNumber = byte_list[0]
+    while i < len(byte_list)-1:
+        myNumber = myNumber << 8
+        myNumber = myNumber | byte_list[i+1] 
+        i += 1
+    return myNumber
+    
 
 
 def get_2_bits(byte_list: list) -> int:
@@ -56,31 +71,36 @@ def get_2_bits(byte_list: list) -> int:
     Extract first two bits of a two-byte sequence
     Return the result as a decimal value
     """
-    # TODO: Implement this function
-    raise NotImplementedError
-
+    a = hex( ((byte_list[0]<<10) | byte_list[1]) )
+    res = int(a, 16) 
+    return (res >> 16)
+    
 
 def get_domain_name_location(byte_list: list) -> int:
     """
     Extract size of the offset from a two-byte sequence
     Return the result as a decimal value
     """
-    # TODO: Implement this function
-    raise NotImplementedError
+    mergedValue = bytes_to_val(byte_list) 
+    mergedValue = (mergedValue & 0xFF)
+    return mergedValue
 
 
 def parse_cli_query(
     q_domain: str, q_type: str, q_server: str = None
 ) -> Tuple[list, int, str]:
-    """
-    Parse command-line query
-    Return a tuple of the domain (as a list of subdomains), numeric type, and the server
-    If the server is not specified, pick a random one from `PUBLIC_DNS_SERVER`
-    If type is not `A` or `AAAA`, raise `ValueError`
-    """
-    # TODO: Implement this function
-    raise NotImplementedError
-
+    print(q_type, "This is the type")
+    print(q_domain, "This is the domain")
+    if q_type == "AAAA" or q_type == "A":
+        print(q_domain, "This is q_domain")
+        q_domainList = q_domain.split(".")
+        q_type_number = DNS_TYPES[q_type]
+        print(q_type_number, "hello?")
+        if q_server == None:
+            q_server = random.choice(PUBLIC_DNS_SERVER)
+        return (((q_domainList, q_type_number, q_server)))
+    if q_type == "MAX" and q_type == "AAA":
+        raise ValueError()
 
 def format_query(q_domain: list, q_type: int) -> bytearray:
     """
@@ -93,9 +113,31 @@ def format_query(q_domain: list, q_type: int) -> bytearray:
     - questions: 1
     - class: Internet
     """
-    # TODO: Implement this function
-    raise NotImplementedError
+    num = randint(0, 65535)
+    flags = 0x100
+    q = 1
+    ans = 0
+    aut = 0
+    add = 0
+    q_class = 1
 
+    byte_arr = bytearray()
+    byte_arr.extend(val_to_2_bytes(num))
+    byte_arr.extend(val_to_2_bytes(flags))
+    byte_arr.extend(val_to_2_bytes(q))
+    byte_arr.extend(val_to_2_bytes(ans))
+    byte_arr.extend(val_to_2_bytes(aut))
+    byte_arr.extend(val_to_2_bytes(add))
+
+    for i in q_domain:
+        byte_arr.append(len(i))
+        for aChar in i:
+            byte_arr.append(ord(aChar))
+
+    byte_arr.extend(b'\00')
+    byte_arr.extend(val_to_2_bytes(q_type))
+    byte_arr.extend(val_to_2_bytes(q_class))
+    return(byte_arr)
 
 def parse_response(resp_bytes: bytes) -> list:
     """
@@ -103,8 +145,7 @@ def parse_response(resp_bytes: bytes) -> list:
     Take response bytes as a parameter
     Return a list of tuples in the format of (name, address, ttl)
     """
-    # TODO: Implement this function
-    raise NotImplementedError
+    pass
 
 
 def parse_answers(resp_bytes: bytes, answer_start: int, rr_ans: int) -> List[tuple]:
@@ -157,7 +198,24 @@ def main():
     """Main function"""
     # TODO: Complete this function
     arg_parser = argparse.ArgumentParser(description="Parse arguments")
+
+    arg_parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable logging.DEBUG mode"
+    )
+
     args = arg_parser.parse_args()
+    
+    arg_parser.add_argument(
+        "domain", type=str, nargs="+", help="domain"
+    )
+
+    # arg_parser.add_argument(TCP_LINGER2
+    #     "type", type=str, nargs="+", help="type"
+    # )
+
+    # arg_parser.add_argument(
+    #     "server", type=str, nargs="+", help="server"
+    # )
 
     logger = logging.getLogger("root")
     if args.debug:
@@ -167,7 +225,7 @@ def main():
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
 
     resolve((args.domain, args.type, args.server))
-    raise NotImplementedError
+    # raise NotImplementedError
 
 
 if __name__ == "__main__":
