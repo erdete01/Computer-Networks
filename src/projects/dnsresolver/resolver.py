@@ -92,15 +92,14 @@ def parse_cli_query(
     print(q_type, "This is the type")
     print(q_domain, "This is the domain")
     if q_type == "AAAA" or q_type == "A":
-        print(q_domain, "This is q_domain")
         q_domainList = q_domain.split(".")
         q_type_number = DNS_TYPES[q_type]
-        print(q_type_number, "hello?")
         if q_server == None:
             q_server = random.choice(PUBLIC_DNS_SERVER)
         return (((q_domainList, q_type_number, q_server)))
-    if q_type == "MAX" and q_type == "AAA":
-        raise ValueError()
+    if q_type == "MX" or q_type == "AAA":
+        print("Hello?")
+        raise ValueError("Unknown query type")
 
 def format_query(q_domain: list, q_type: int) -> bytearray:
     """
