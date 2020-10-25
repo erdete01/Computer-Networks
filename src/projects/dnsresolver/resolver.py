@@ -6,9 +6,11 @@ DNS Resolver
 import argparse
 import logging
 from random import randint, choice
+from re import match
 from socket import TCP_LINGER2, socket, SOCK_DGRAM, AF_INET
 from typing import Tuple, List
 import random
+import re
 
 PORT = 53
 
@@ -89,8 +91,6 @@ def get_domain_name_location(byte_list: list) -> int:
 def parse_cli_query(
     q_domain: str, q_type: str, q_server: str = None
 ) -> Tuple[list, int, str]:
-    print(q_type, "This is the type")
-    print(q_domain, "This is the domain")
     if q_type == "AAAA" or q_type == "A":
         q_domainList = q_domain.split(".")
         q_type_number = DNS_TYPES[q_type]
@@ -98,7 +98,6 @@ def parse_cli_query(
             q_server = random.choice(PUBLIC_DNS_SERVER)
         return (((q_domainList, q_type_number, q_server)))
     if q_type == "MX" or q_type == "AAA":
-        print("Hello?")
         raise ValueError("Unknown query type")
 
 def format_query(q_domain: list, q_type: int) -> bytearray:
@@ -144,8 +143,23 @@ def parse_response(resp_bytes: bytes) -> list:
     Take response bytes as a parameter
     Return a list of tuples in the format of (name, address, ttl)
     """
-    pass
+    # b'\xc7D\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00
+    # \x06luther\x03edu\x00\x00\x01\x00\x01\xc0\x0c\
+    # x00\x01\x00\x01\x00\x00\x01,\x00\x04\xae\x81\x19\xaa'
+    myTuple = []
+    answer_start = resp_bytes[12]
+    answer_start2 = resp_bytes[25]
+    answer_start3 = answer_start + answer_start2 + 1
+    rr_ans = resp_bytes[7]
+    print(resp_bytes.decode("utf-8"), "Does it work?")
+    print(answer_start, "TEST2",answer_start2, "TEST", answer_start3)
+    print(resp_bytes)
 
+    for i in range(rr_ans):
+        answer = parse_answers(resp_bytes, 12, rr_ans)
+        myTuple.append(answer)
+        
+    # print(parse_answers(resp_bytes, answer_start, rr_ans))
 
 def parse_answers(resp_bytes: bytes, answer_start: int, rr_ans: int) -> List[tuple]:
     """
@@ -153,8 +167,41 @@ def parse_answers(resp_bytes: bytes, answer_start: int, rr_ans: int) -> List[tup
     Take response bytes, offset, and the number of answers as parameters
     Return a list of tuples in the format of (name, address, ttl)
     """
-    # TODO: Implement this function
-    raise NotImplementedError
+    domain_name = ''
+    for i in range(13, 13 + resp_bytes[12]):
+        domain_name += (chr(resp_bytes[i]))
+    domain_name = domain_name + "."
+    for i in range(18, 18 + resp_bytes[12]):
+        domain_name += (chr(resp_bytes[i]))
+
+    if answer_start >= 28:
+        myBytes = resp_bytes[answer_start+12:answer_start+17]
+        ipAdd = parse_address_a(4, myBytes)
+        print(ipAdd, "This is 4")
+    else:
+        test_str = str(resp_bytes)
+        test_sub = "x01I"
+        matches = re.finditer(test_sub, test_str)
+        matches_positions = [match.start() for match in matches]
+        print(matches_positions, "Hello I am Groot")
+        for i in matches_positions:
+            print(resp_bytes[i+12:i+28])
+        # resp_bytes.find(b'\x01I\x98')
+        # print(resp_bytes)
+
+            # myIndex = pass
+            # myBytes = resp_bytes[answer_start+12:answer_start+28]
+            # ipAdd = parse_address_aaaa(16, myBytes)
+            # print(ipAdd,"this is 16")
+
+    # ipAdd = []
+    # for i in range(rr_ans):
+    #     ipAdd.append(resp_bytes[answer_start+12:answer_start+16])
+
+    # myIPAddress = list(resp_bytes[answer_start+12:answer_start+16])
+    
+    return ()
+    # print(resp_bytes, "   number 1   ", answer_start, "   number 2   ", rr_ans, "I am here")
 
 
 def parse_address_a(addr_len: int, addr_bytes: bytes) -> str:
@@ -162,15 +209,32 @@ def parse_address_a(addr_len: int, addr_bytes: bytes) -> str:
     Parse IPv4 address
     Convert bytes to human-readable dotted-decimal
     """
-    # TODO: Implement this function
-    raise NotImplementedError
-
+    myStr = ""
+    for i in  list(addr_bytes):
+        myStr += (str(i) + '.')
+    return myStr[:-1]
+    
 
 def parse_address_aaaa(addr_len: int, addr_bytes: bytes) -> str:
     """Extract IPv6 address"""
     # TODO: Implement this function
-    raise NotImplementedError
+    myStr = ""
+    myList = list(addr_bytes)
 
+    i = 0
+    j = 1
+
+    while i < len(myList) and j < len(myList):
+        
+        firstNumber = myList[i] << 8
+        secondNumber = hex(myList[j] | firstNumber)
+        myStr += (secondNumber[2:] + ":")
+        print(myStr)
+
+        i += 2
+        j += 2
+
+    return myStr[:-1]
 
 def resolve(query: tuple) -> None:
     """Resolve the query"""
@@ -207,14 +271,6 @@ def main():
     arg_parser.add_argument(
         "domain", type=str, nargs="+", help="domain"
     )
-
-    # arg_parser.add_argument(TCP_LINGER2
-    #     "type", type=str, nargs="+", help="type"
-    # )
-
-    # arg_parser.add_argument(
-    #     "server", type=str, nargs="+", help="server"
-    # )
 
     logger = logging.getLogger("root")
     if args.debug:
