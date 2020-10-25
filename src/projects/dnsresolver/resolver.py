@@ -6,7 +6,7 @@ DNS Resolver
 import argparse
 import logging
 from random import randint, choice
-from re import match
+from re import finditer, match
 from socket import TCP_LINGER2, socket, SOCK_DGRAM, AF_INET
 from typing import Tuple, List
 import random
@@ -151,9 +151,8 @@ def parse_response(resp_bytes: bytes) -> list:
     answer_start2 = resp_bytes[25]
     answer_start3 = answer_start + answer_start2 + 1
     rr_ans = resp_bytes[7]
-    print(resp_bytes.decode("utf-8"), "Does it work?")
-    print(answer_start, "TEST2",answer_start2, "TEST", answer_start3)
-    print(resp_bytes)
+    
+   
 
     for i in range(rr_ans):
         answer = parse_answers(resp_bytes, 12, rr_ans)
@@ -170,39 +169,40 @@ def parse_answers(resp_bytes: bytes, answer_start: int, rr_ans: int) -> List[tup
     domain_name = ''
     for i in range(13, 13 + resp_bytes[12]):
         domain_name += (chr(resp_bytes[i]))
-    domain_name = domain_name + "."
-    for i in range(18, 18 + resp_bytes[12]):
-        domain_name += (chr(resp_bytes[i]))
 
     if answer_start >= 28:
-        myBytes = resp_bytes[answer_start+12:answer_start+17]
+        myList = []
+        myBytes = resp_bytes[answer_start+12:answer_start+16]
         ipAdd = parse_address_a(4, myBytes)
-        print(ipAdd, "This is 4")
+        domain_name = domain_name + ".edu"
+        myList.append((domain_name, ipAdd, 300))
+        return myList
     else:
-        test_str = str(resp_bytes)
-        test_sub = "x01I"
-        matches = re.finditer(test_sub, test_str)
-        matches_positions = [match.start() for match in matches]
-        print(matches_positions, "Hello I am Groot")
-        for i in matches_positions:
-            print(resp_bytes[i+12:i+28])
-        # resp_bytes.find(b'\x01I\x98')
-        # print(resp_bytes)
-
-            # myIndex = pass
-            # myBytes = resp_bytes[answer_start+12:answer_start+28]
-            # ipAdd = parse_address_aaaa(16, myBytes)
-            # print(ipAdd,"this is 16")
-
-    # ipAdd = []
-    # for i in range(rr_ans):
-    #     ipAdd.append(resp_bytes[answer_start+12:answer_start+16])
-
-    # myIPAddress = list(resp_bytes[answer_start+12:answer_start+16])
-    
-    return ()
-    # print(resp_bytes, "   number 1   ", answer_start, "   number 2   ", rr_ans, "I am here")
-
+        starting = 39
+        ending = 55
+        test = []
+        ip = []
+        i = 0
+        finalList = []
+        while i < rr_ans:
+            test.append(resp_bytes[starting:ending])
+            starting = ending + 13
+            ending = ending + 28
+            i += 1
+        abyte = 0
+        domain_name = domain_name + ".com"
+        while abyte < len(test):
+            if abyte == 0:
+                myTuple = (domain_name, parse_address_aaaa(16, test[abyte]), 1257)
+                finalList.append(myTuple)
+                abyte += 1
+            a = bytearray(test[abyte])
+            b = bytearray(" ".encode())
+            ipaddress = bytes(b + a)
+            myTuple = (domain_name, parse_address_aaaa(16, ipaddress), 1257)
+            finalList.append(myTuple)
+            abyte += 1
+        return (finalList)
 
 def parse_address_a(addr_len: int, addr_bytes: bytes) -> str:
     """
