@@ -143,22 +143,11 @@ def parse_response(resp_bytes: bytes) -> list:
     Take response bytes as a parameter
     Return a list of tuples in the format of (name, address, ttl)
     """
-    # b'\xc7D\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00
-    # \x06luther\x03edu\x00\x00\x01\x00\x01\xc0\x0c\
-    # x00\x01\x00\x01\x00\x00\x01,\x00\x04\xae\x81\x19\xaa'
     myTuple = []
-    answer_start = resp_bytes[12]
-    answer_start2 = resp_bytes[25]
-    answer_start3 = answer_start + answer_start2 + 1
     rr_ans = resp_bytes[7]
-    
-   
-
-    for i in range(rr_ans):
-        answer = parse_answers(resp_bytes, 12, rr_ans)
-        myTuple.append(answer)
-        
-    # print(parse_answers(resp_bytes, answer_start, rr_ans))
+    ans_start = 12
+    myTuple.append(parse_answers(resp_bytes, ans_start ,rr_ans))
+    return myTuple
 
 def parse_answers(resp_bytes: bytes, answer_start: int, rr_ans: int) -> List[tuple]:
     """
@@ -217,7 +206,6 @@ def parse_address_a(addr_len: int, addr_bytes: bytes) -> str:
 
 def parse_address_aaaa(addr_len: int, addr_bytes: bytes) -> str:
     """Extract IPv6 address"""
-    # TODO: Implement this function
     myStr = ""
     myList = list(addr_bytes)
 
@@ -229,7 +217,6 @@ def parse_address_aaaa(addr_len: int, addr_bytes: bytes) -> str:
         firstNumber = myList[i] << 8
         secondNumber = hex(myList[j] | firstNumber)
         myStr += (secondNumber[2:] + ":")
-        print(myStr)
 
         i += 2
         j += 2
@@ -280,7 +267,6 @@ def main():
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
 
     resolve((args.domain, args.type, args.server))
-    # raise NotImplementedError
 
 
 if __name__ == "__main__":
