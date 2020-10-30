@@ -15,8 +15,8 @@ ECHO_REQUEST_TYPE = 8
 ECHO_REPLY_TYPE = 0
 ECHO_REQUEST_CODE = 0
 ECHO_REPLY_CODE = 0
-REGISTRARS = ["afrinic.net", "apnic.net", "arin.net", "lacnic.net", "ripe.net"]
-# REGISTRARS = ["example.com"]
+# REGISTRARS = ["afrinic.net", "apnic.net", "arin.net", "lacnic.net", "ripe.net"]
+REGISTRARS = ["example.com"]
 
 
 def print_raw_bytes(pkt: bytes) -> None:
@@ -35,7 +35,7 @@ def checksum(pkt: bytes) -> int:
     csum = 0
     count = 0
     count_to = (len(pkt) // 2) * 2
-
+    
     while count < count_to:
         this_val = (pkt[count + 1]) * 256 + (pkt[count])
         csum = csum + this_val
@@ -53,12 +53,13 @@ def checksum(pkt: bytes) -> int:
     result = result >> 8 | (result << 8 & 0xFF00)
 
     return result
-
+    
 
 def parse_reply(
     my_socket: socket.socket, req_id: int, timeout: int, addr_dst: str
 ) -> tuple:
     """Receive an Echo reply"""
+    print()
     time_left = timeout
     while True:
         started_select = time.time()
@@ -69,15 +70,18 @@ def parse_reply(
 
         time_rcvd = time.time()
         pkt_rcvd, addr = my_socket.recvfrom(1024)
+        print(pkt_rcvd, addr, "Here is the address")
+        print(addr_dst, "I am address_dst")
         if addr[0] != addr_dst:
-            raise ValueError(f"Wrong sender: {addr[0]}")
+            #raise ValueError(f"Wrong sender: {addr[0]}")
+            raise ValueError("Incorrect type. Expected 0, received 1")
         # TODO: Extract ICMP header from the IP packet and parse it
-        # print_raw_bytes(pkt_rcvd)
+        
         # DONE: End of ICMP parsing
         time_left = time_left - how_long_in_select
         if time_left <= 0:
             raise TimeoutError("Request timed out after 1 sec")
-
+        return False
 
 def format_request(req_id: int, seq_num: int) -> bytes:
     """Format an Echo request"""
@@ -121,12 +125,12 @@ def send_request(addr_dst: str, seq_num: int, timeout: int = 1) -> tuple:
 
 def ping(host: str, pkts: int, timeout: int = 1) -> None:
     """Main loop"""
-    # TODO: Implement the main loop
-
-    # DONE
-    return
+    myBytes = bytes(pkts)
+    print(print_raw_bytes(myBytes))
+    pass
 
 
 if __name__ == "__main__":
+    print(print_raw_bytes(pkt))
     for rir in REGISTRARS:
-        ping(rir, 5)
+        ping(rir, 1)
