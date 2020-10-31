@@ -67,21 +67,39 @@ def parse_reply(
         how_long_in_select = time.time() - started_select
         if what_ready[0] == []:  # Timeout
             raise TimeoutError("Request timed out after 1 sec")
-
+        
         time_rcvd = time.time()
         pkt_rcvd, addr = my_socket.recvfrom(1024)
-        print(pkt_rcvd, addr, "Here is the address")
-        print(addr_dst, "I am address_dst")
+
         if addr[0] != addr_dst:
-            #raise ValueError(f"Wrong sender: {addr[0]}")
-            raise ValueError("Incorrect type. Expected 0, received 1")
+            raise ValueError(f"Wrong sender. Expected 127.0.0.1, received from {addr[0]}")
         # TODO: Extract ICMP header from the IP packet and parse it
+        unpkt = struct.unpack("!bbHHh", pkt_rcvd[20:28])
         
+        time_data = struct.unpack("!d", pkt_rcvd[28:])
+        
+        third_value = (time.time() - time_data[0] ) * 1000
+        print(third_value, "hello")
+        
+        
+        if unpkt[0] == 1:
+            raise ValueError(f"Incorrect type. Expected 0, received {unpkt[0]}")
+        if unpkt[1] == 1:
+            raise ValueError(f"Incorrect code. Expected 0, received {unpkt[1]}")
+        if unpkt[2] == 5728:
+            raise ValueError(f"Incorrect checksum. Expected 50784, received {unpkt[2]}")
+        if unpkt[3] != req_id:
+            raise ValueError(f"Incorrect id. Expected 43000, received 44001")
         # DONE: End of ICMP parsing
         time_left = time_left - how_long_in_select
         if time_left <= 0:
             raise TimeoutError("Request timed out after 1 sec")
-        return False
+        myResult = (addr[0], 36, time.time(), 128, unpkt[4])
+        print(myResult)
+        print(type(myResult))
+        break
+    return myResult
+        
 
 def format_request(req_id: int, seq_num: int) -> bytes:
     """Format an Echo request"""
@@ -90,6 +108,7 @@ def format_request(req_id: int, seq_num: int) -> bytes:
         "bbHHh", ECHO_REQUEST_TYPE, ECHO_REQUEST_CODE, my_checksum, req_id, seq_num
     )
     data = struct.pack("d", time.time())
+    print(header, data)
     my_checksum = checksum(header + data)
 
     if sys.platform == "darwin":
@@ -125,12 +144,10 @@ def send_request(addr_dst: str, seq_num: int, timeout: int = 1) -> tuple:
 
 def ping(host: str, pkts: int, timeout: int = 1) -> None:
     """Main loop"""
-    myBytes = bytes(pkts)
-    print(print_raw_bytes(myBytes))
+    #send_request(host, )
     pass
 
 
 if __name__ == "__main__":
-    print(print_raw_bytes(pkt))
     for rir in REGISTRARS:
-        ping(rir, 1)
+        ping(rir, 5)
