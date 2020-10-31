@@ -74,14 +74,8 @@ def parse_reply(
         if addr[0] != addr_dst:
             raise ValueError(f"Wrong sender. Expected 127.0.0.1, received from {addr[0]}")
         # TODO: Extract ICMP header from the IP packet and parse it
+        
         unpkt = struct.unpack("!bbHHh", pkt_rcvd[20:28])
-        
-        time_data = struct.unpack("!d", pkt_rcvd[28:])
-        
-        third_value = (time.time() - time_data[0] ) * 1000
-        print(third_value, "hello")
-        
-        
         if unpkt[0] == 1:
             raise ValueError(f"Incorrect type. Expected 0, received {unpkt[0]}")
         if unpkt[1] == 1:
@@ -94,9 +88,8 @@ def parse_reply(
         time_left = time_left - how_long_in_select
         if time_left <= 0:
             raise TimeoutError("Request timed out after 1 sec")
-        myResult = (addr[0], 36, time.time(), 128, unpkt[4])
-        print(myResult)
-        print(type(myResult))
+        time_data = struct.unpack("!d", pkt_rcvd[28:])
+        myResult = (addr[0], 36, (time.time()-time_data[0])*1000, 128, unpkt[4])
         break
     return myResult
         
