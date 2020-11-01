@@ -9,6 +9,7 @@ import struct
 import sys
 import time
 import socket
+from random import random
 from statistics import mean, stdev
 
 ECHO_REQUEST_TYPE = 8
@@ -70,11 +71,9 @@ def parse_reply(
         
         time_rcvd = time.time()
         pkt_rcvd, addr = my_socket.recvfrom(1024)
-
         if addr[0] != addr_dst:
-            raise ValueError(f"Wrong sender. Expected 127.0.0.1, received from {addr[0]}")
+            raise ValueError(f"Wrong sender. Expected {addr_dst}, received from {addr[0]}")
         # TODO: Extract ICMP header from the IP packet and parse it
-        
         unpkt = struct.unpack("!bbHHh", pkt_rcvd[20:28])
         if unpkt[0] == 1:
             raise ValueError(f"Incorrect type. Expected 0, received {unpkt[0]}")
@@ -93,7 +92,6 @@ def parse_reply(
         break
     return myResult
         
-
 def format_request(req_id: int, seq_num: int) -> bytes:
     """Format an Echo request"""
     my_checksum = 0
@@ -101,7 +99,6 @@ def format_request(req_id: int, seq_num: int) -> bytes:
         "bbHHh", ECHO_REQUEST_TYPE, ECHO_REQUEST_CODE, my_checksum, req_id, seq_num
     )
     data = struct.pack("d", time.time())
-    print(header, data)
     my_checksum = checksum(header + data)
 
     if sys.platform == "darwin":
@@ -137,8 +134,8 @@ def send_request(addr_dst: str, seq_num: int, timeout: int = 1) -> tuple:
 
 def ping(host: str, pkts: int, timeout: int = 1) -> None:
     """Main loop"""
-    #send_request(host, )
-    pass
+    for i in range(pkts):
+        send_request(host, i)
 
 
 if __name__ == "__main__":
