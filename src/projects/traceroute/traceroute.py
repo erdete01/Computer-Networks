@@ -1,35 +1,56 @@
+import argparse
+import logging
+import os
+import socket
+import struct
+import time
+
+ECHO_REQUEST_CODE = 0
+ECHO_REQUEST_TYPE = 8
+
+"""Python tracert implementation using ICMP"""
+#!/usr/bin/env python3
+
+ATTEMPTS = 3
+def checksum(pkt_bytes: bytes) -> int:
+    #Calculate checksum
+    s = 0
+    for i in range(0, len(pkt_bytes), 2):
+        pass
+    
+    return ~s & 0xFFFF
 
 
+def main():
+    arg_parser = argparse.ArgumentParser(description="Parse arguments")
+    arg_parser.add_argument("-d", "--debug", action="store_true", help="Enable logging.DEBUG mode")
+    arg_parser.add_argument("server", type=str, help="Server to ping")
+    args = arg_parser.parse_args()
 
+    logger = logging.getLogger("root")
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
+    #Trace the route to a domain
+    traceroute(args.server)
 
+"""
 
+def format_request(req_id: int, seq_num: int) -> bytes:
+    pass
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def parse_reply(pkt_bytes: bytes) -> None:
+    pass
+def receive_reply(sock: socket) -> tuple:
+    pass
+def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float:
+    pass
+def traceroute(hostname: str, max_hops: int = 30) -> None:
+    pass
+"""
+"""
 
                             f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]"
                         )
@@ -75,7 +96,7 @@
             print(f"{ttl:>3d}   ", end="")
             seq_id = 0
             ttl += 1
-        "-d", "--debug", action="store_true", help="Enable logging.DEBUG mode"
+        
         "!BBHHH",
         "!BBHHH",
         "!BBHHH", header
@@ -121,48 +142,30 @@
     :returns checksum as an integer
     :returns current time
     :returns properly formatted Echo request
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """
-    """Main function"""
+    data = b"VOTE!"
+
     )
     )
     )
     )
     )
     ) as sock:
-    arg_parser = argparse.ArgumentParser(description="Parse arguments")
-    arg_parser.add_argument(
-    arg_parser.add_argument("server", type=str, help="Server to ping")
-    args = arg_parser.parse_args()
-    Calculate checksum
-    data = b"VOTE!"
+    
     data = pkt_bytes[28:]
     dest_addr = socket.gethostbyname(hostname)
-    else:
-    expected_types_and_codes = {0: [0], 3: [0, 1, 3], 8: [0], 11: [0]}
-    for i in range(0, len(pkt_bytes), 2):
     Format an Echo request
     header = pkt_bytes[20:28]
     header = struct.pack(
     header = struct.pack(
-    if args.debug:
+        else:
+    expected_types_and_codes = {0: [0], 3: [0, 1, 3], 8: [0], 11: [0]}
+
     if checksum(header + data) != 0:
     if len(pkt_bytes) % 2:
     if repl_code not in expected_types_and_codes[repl_type]:
     if repl_type not in expected_types_and_codes:
-    logger = logging.getLogger("root")
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
-    main()
+    
+    
     Parse an ICMP reply
     pkt_bytes, addr = sock.recvfrom(1024)
     print(
@@ -170,33 +173,20 @@
     Receive an ICMP reply
     repl_type, repl_code, repl_checksum, repl_id, sequence = struct.unpack(
     req_id = os.getpid() & 0xFFFF
-    return ~s & 0xFFFF
+    
     return header + data
     return pkt_bytes, addr, time.time()
     return time.time()
-    s = 0
-    Send an Echo Request
+    
+    Send an Ecs = 0ho Request
     sock.sendto(pkt_bytes, (addr_dst, 33434))
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
-    Trace the route to a domain
-    traceroute(args.server)
+
     with socket.socket(
-"""Python tracert implementation using ICMP"""
-#!/usr/bin/env python3
-ATTEMPTS = 3
-def checksum(pkt_bytes: bytes) -> int:
-def format_request(req_id: int, seq_num: int) -> bytes:
-def main():
-def parse_reply(pkt_bytes: bytes) -> None:
-def receive_reply(sock: socket) -> tuple:
-def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float:
-def traceroute(hostname: str, max_hops: int = 30) -> None:
-ECHO_REQUEST_CODE = 0
-ECHO_REQUEST_TYPE = 8
+"""
+
+#Main function
 if __name__ == "__main__":
-import argparse
-import logging
-import os
-import socket
-import struct
-import time
+    #for _ in range(ATTEMPTS):
+    main()
+
