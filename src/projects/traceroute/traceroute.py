@@ -4,6 +4,7 @@ import os
 import socket
 import struct
 import time
+import sys
 
 ECHO_REQUEST_CODE = 0
 ECHO_REQUEST_TYPE = 8
@@ -16,16 +17,20 @@ def checksum(pkt_bytes: bytes) -> int:
     #Calculate checksum
     s = 0
     w = 0
-    for i in range(0, len(pkt_bytes), 2):
-        #w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
+    c = 0
+    ct = (len(pkt_bytes) // 2) * 2
+    for i in range(0, len(pkt_bytes) -1, 2):
         this_val = (pkt_bytes[i + 1]) * 256 + (pkt_bytes[i])
         w += this_val
         w = w & 0xFFFFFFFF
+    if ct < len(pkt_bytes):
+        w += (pkt_bytes[len(pkt_bytes) - 1])
+        w = w & 0xFFFFFFFF
     s = ((s + w) & 0xFFFF) + ((s + w) >> 16)
     s = (~s & 0xFFFF)
-    s = s >> 8 | (s << 8 & 0xFF00)
-    return s
-
+    result = s >> 8 | (s << 8 & 0xFF00)
+    return result
+    
 def traceroute(hostname: str, max_hops: int = 30) -> None:
     ttl = 0
     seq_id = 0
@@ -47,11 +52,14 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
 
 def format_request(req_id: int, seq_num: int) -> bytes:
     "Format an Echo request"
+    data = b"VOTE!"
     myChecksum = 0
     header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
-    data = struct.pack("d", time.time())
-    # Now I have to implement checkSUm)
     myChecksum = checksum(header + data)
+    myChecksum = socket.htons(myChecksum)
+    header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
+    return header + data
+
 
 def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
     seq_id = 0
@@ -78,9 +86,7 @@ def main():
 #Main function
 if __name__ == "__main__":
     #for _ in range(ATTEMPTS):
-    pkt_bytes = b"\x08\x00\x00\x00\x00\x01\x00\x01\x91\x9b(\x19'\xe6\xd7A"
-    checksum(pkt_bytes)
-    #main()
+    main()
 
 
 """
