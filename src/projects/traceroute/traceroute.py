@@ -15,11 +15,46 @@ ATTEMPTS = 3
 def checksum(pkt_bytes: bytes) -> int:
     #Calculate checksum
     s = 0
+    print(len(pkt_bytes) )
     for i in range(0, len(pkt_bytes), 2):
-        pass
-    
+        w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
+        print(w, "this val")
+        #s += w
+    s = ((s + w) & 0xFFFF) + ((s + w) >> 16)
     return ~s & 0xFFFF
 
+def traceroute(hostname: str, max_hops: int = 30) -> None:
+    ttl = 0
+    seq_id = 0
+    destination_reached = False
+    req_id = os.getpid() & 0xFFFF
+    promo = socket.getprotobyname("icmp")
+    with socket.socket(socket.AF_INET, socket.SOCK_RAW, promo) as sock:
+        print(req_id, seq_id)
+        pkt_out = format_request(req_id, seq_id)
+        #sock.sendto(pkt_bytes, (addr_dst, 33434))
+
+    """
+    while ttl < max_hops and not destination_reached:
+        time_sent = send_request(sock, pkt_out, dest_addr, ttl)
+        destination_reached = True
+        ttl += 1
+    """
+    pass
+
+def format_request(req_id: int, seq_num: int) -> bytes:
+    "Format an Echo request"
+    myChecksum = 0
+    header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
+    data = struct.pack("d", time.time())
+    myChecksum = checksum(header + data)
+
+def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
+    seq_id = 0
+    try:
+        parse_reply(pkt_in)
+    except ValueError as val_err:
+        print(f"Error while parsing the response: {str(val_err)}")
 
 def main():
     arg_parser = argparse.ArgumentParser(description="Parse arguments")
@@ -36,18 +71,17 @@ def main():
     #Trace the route to a domain
     traceroute(args.server)
 
-"""
+#Main function
+if __name__ == "__main__":
+    #for _ in range(ATTEMPTS):
+    main()
 
-def format_request(req_id: int, seq_num: int) -> bytes:
-    pass
+
+"""
 
 def parse_reply(pkt_bytes: bytes) -> None:
     pass
 def receive_reply(sock: socket) -> tuple:
-    pass
-def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float:
-    pass
-def traceroute(hostname: str, max_hops: int = 30) -> None:
     pass
 """
 """
@@ -58,7 +92,7 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
                         comment = (
                         comment = resp_addr[0]
                         comment if comment else f"Request timed out: {str(to_err)}"
-                        else f"Error while parsing the response: {str(val_err)}"
+                        else 
                         if comment
                     )
                     )
@@ -68,23 +102,23 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
                     continue
                     destination_reached = True
                     except:
-                    parse_reply(pkt_in)
+                    
                     pkt_in, resp_addr, time_rcvd = receive_reply(sock)
                     print(f"{'!':>3s}      ", end="")
                     print(f"{'*':>3s}      ", end="")
                     print(f"{'<1':>3s} ms   ", end="")
                     print(f"{rtt:>3.0f} ms   ", end="")
-                    try:
+                    
                 else:
                 except (socket.timeout, TimeoutError) as to_err:
-                except ValueError as val_err:
+                
                 if not comment:
                 if resp_addr[0] == dest_addr:
                 if rtt > 1:
-                pkt_out = format_request(req_id, seq_id)
+                
                 rtt = (time_rcvd - time_sent) * 1000
                 seq_id += 1
-                time_sent = send_request(sock, pkt_out, dest_addr, ttl)
+                
                 try:
             + f"instead of {', '.join([str(t) for t in expected_types_and_codes])}"
             + f"instead of {checksum(header + data):04x}"
@@ -94,8 +128,8 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
             for _ in range(ATTEMPTS):
             print(comment)
             print(f"{ttl:>3d}   ", end="")
-            seq_id = 0
-            ttl += 1
+            
+            
         
         "!BBHHH",
         "!BBHHH",
@@ -105,7 +139,6 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
         + f"over a maximum of {max_hops} hops\n"
         0,
         checksum(header + data),
-        destination_reached = False
         ECHO_REQUEST_CODE,
         ECHO_REQUEST_CODE,
         ECHO_REQUEST_TYPE,
@@ -123,10 +156,8 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
         seq_num,
         seq_num,
         sock.settimeout(1)
-        socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp")
-        ttl = 0
+        
         w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
-        while ttl < max_hops and not destination_reached:
     :param addr_dst: destination address
     :param hostname: host name
     :param max_hops: max hops
@@ -172,21 +203,15 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
     print("\nTrace complete.")
     Receive an ICMP reply
     repl_type, repl_code, repl_checksum, repl_id, sequence = struct.unpack(
-    req_id = os.getpid() & 0xFFFF
+    
     
     return header + data
     return pkt_bytes, addr, time.time()
     return time.time()
     
     Send an Ecs = 0ho Request
-    sock.sendto(pkt_bytes, (addr_dst, 33434))
+    
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
 
     with socket.socket(
 """
-
-#Main function
-if __name__ == "__main__":
-    #for _ in range(ATTEMPTS):
-    main()
-
