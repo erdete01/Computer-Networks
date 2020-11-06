@@ -15,13 +15,16 @@ ATTEMPTS = 3
 def checksum(pkt_bytes: bytes) -> int:
     #Calculate checksum
     s = 0
-    print(len(pkt_bytes) )
+    w = 0
     for i in range(0, len(pkt_bytes), 2):
-        w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
-        print(w, "this val")
-        #s += w
+        #w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
+        this_val = (pkt_bytes[i + 1]) * 256 + (pkt_bytes[i])
+        w += this_val
+        w = w & 0xFFFFFFFF
     s = ((s + w) & 0xFFFF) + ((s + w) >> 16)
-    return ~s & 0xFFFF
+    s = (~s & 0xFFFF)
+    s = s >> 8 | (s << 8 & 0xFF00)
+    return s
 
 def traceroute(hostname: str, max_hops: int = 30) -> None:
     ttl = 0
@@ -47,6 +50,7 @@ def format_request(req_id: int, seq_num: int) -> bytes:
     myChecksum = 0
     header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
     data = struct.pack("d", time.time())
+    # Now I have to implement checkSUm)
     myChecksum = checksum(header + data)
 
 def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
@@ -74,7 +78,9 @@ def main():
 #Main function
 if __name__ == "__main__":
     #for _ in range(ATTEMPTS):
-    main()
+    pkt_bytes = b"\x08\x00\x00\x00\x00\x01\x00\x01\x91\x9b(\x19'\xe6\xd7A"
+    checksum(pkt_bytes)
+    #main()
 
 
 """
