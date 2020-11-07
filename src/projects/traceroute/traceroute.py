@@ -30,7 +30,29 @@ def checksum(pkt_bytes: bytes) -> int:
     s = (~s & 0xFFFF)
     result = s >> 8 | (s << 8 & 0xFF00)
     return result
+
+def format_request(req_id: int, seq_num: int) -> bytes:
+    "Format an Echo request"
+    data = b"VOTE!"
+    header = struct.pack("!BBHHH", ECHO_REQUEST_TYPE, ECHO_REQUEST_CODE, ECHO_REQUEST_CODE, req_id, seq_num)
+    myChecksum = checksum(header + data)
+    header = struct.pack("!BBHHH", ECHO_REQUEST_TYPE, ECHO_REQUEST_CODE, myChecksum, req_id, seq_num)
+    return header + data
     
+
+def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
+
+    print(socket, pkt_bytes, addr_dst, ttl)
+    sock.sendto(pkt_bytes, (addr_dst, 33434))
+    pkt_bytes, addr = sock.recvfrom(1024)
+    print(addr, pkt_bytes)
+    """
+    seq_id = 0
+    try:
+        parse_reply(pkt_in)
+    except ValueError as val_err:
+        print(f"Error while parsing the response: {str(val_err)}")
+    """
 def traceroute(hostname: str, max_hops: int = 30) -> None:
     ttl = 0
     seq_id = 0
@@ -49,24 +71,6 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
         ttl += 1
     """
     pass
-
-def format_request(req_id: int, seq_num: int) -> bytes:
-    "Format an Echo request"
-    data = b"VOTE!"
-    myChecksum = 0
-    header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
-    myChecksum = checksum(header + data)
-    myChecksum = socket.htons(myChecksum)
-    header = struct.pack("!BBHHH", ECHO_REQUEST_CODE, ECHO_REQUEST_TYPE, myChecksum, req_id, seq_num)
-    return header + data
-
-
-def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
-    seq_id = 0
-    try:
-        parse_reply(pkt_in)
-    except ValueError as val_err:
-        print(f"Error while parsing the response: {str(val_err)}")
 
 def main():
     arg_parser = argparse.ArgumentParser(description="Parse arguments")
