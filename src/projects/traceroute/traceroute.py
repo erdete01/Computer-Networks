@@ -86,20 +86,33 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
         req_id = os.getpid() & 0xFFFF
         pkt_out = format_request(req_id, seq_id)
         with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp")) as sock:
+            
             # Send the request to the destination host
             time_sent = send_request(sock, pkt_out, dest_addr, ttl)
             # Receive an ICMP reply
             pkt_in, resp_addr, time_rcvd = receive_reply(sock)
-            print(pkt_in, resp_addr, time_rcvd)
             # Parse the response and check for errors
+            try:
+                parse_reply(pkt_in)
+            except ValueError as val_err:
+                print(f"Error while parsing the response: {str(val_err)}")
+                continue
+            #Print the relevant statistics, if possible
             rtt = (time_rcvd - time_sent) * 1000
-            # Needs to check if every cases now. 
-            if rtt > 1:
-                print(f"{'!':>3s}      ", end="")
-                print(f"{'*':>3s}      ", end="")
-                print(f"{'<1':>3s} ms   ", end="")
-                print(f"{rtt:>3.0f} ms   ", end="")
-        destination_reached = True
+            comment = ""
+            comment = resp_addr[0]
+            #print(socket.gethostbyaddr(resp_addr[0])[0])
+            print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
+            try:
+                if rtt > 1:   
+                    print(f"{ttl}  " + f"{rtt:>3.0f} ms  " + f"{comment}  ", end="")
+                    print('\n')
+                if rtt < 1:
+                    print(f"{'<1':>3s} ms   ", end="")
+            except (socket.timeout, TimeoutError) as to_err:
+                    print(f"Request timed out: {str(to_err)}")
+                    continue
+        #destination_reached = True
         seq_id += 1
         ttl += 1
 
