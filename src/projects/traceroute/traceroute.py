@@ -39,37 +39,62 @@ def format_request(req_id: int, seq_num: int) -> bytes:
     header = struct.pack("!BBHHH", ECHO_REQUEST_TYPE, ECHO_REQUEST_CODE, myChecksum, req_id, seq_num)
     return header + data
     
-
 def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
-
-    print(socket, pkt_bytes, addr_dst, ttl)
+    #`send_request`: takes *socket*, *packet bytes*, *destination address*, and *Time-to-Live* value as arguments, 
+    #sends the specified data to the address, and returns current time. 
+    #This function sets the socket's time-to-live option to the supplied value.
+    #returns current time
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
     sock.sendto(pkt_bytes, (addr_dst, 33434))
+    return time.time()
+
+def receive_reply(sock: socket) -> tuple:
+    #returns a tuple of the received packet bytes, responder's address, and current time
     pkt_bytes, addr = sock.recvfrom(1024)
-    print(addr, pkt_bytes)
-    """
-    seq_id = 0
-    try:
-        parse_reply(pkt_in)
-    except ValueError as val_err:
-        print(f"Error while parsing the response: {str(val_err)}")
-    """
+    return pkt_bytes, addr, time.time()
+
+
+def parse_reply(pkt_bytes: bytes) -> None:
+    expected_types_and_codes = {0: [0], 3: [0, 1, 3], 8: [0], 11: [0]}
+    header = pkt_bytes[20:28]
+    data = pkt_bytes[28:]
+    sequence = struct.unpack("!BBHHH", header)
+    repl_type = sequence[0]
+    repl_code = sequence[1]
+    repl_checksum = sequence[2]
+
+    if repl_type not in expected_types_and_codes:
+        raise ValueError(f"Incorrect type {repl_type} received " + f"instead of {', '.join([str(t) for t in expected_types_and_codes])}")
+
+    if repl_code not in expected_types_and_codes[repl_type]:
+        raise ValueError(f"Incorrect code {repl_code} received with type {repl_type}")
+    
+    if checksum(header + data) != 0:
+        raise ValueError(f"Incorrect checksum {repl_checksum:04x} received " + f"instead of {checksum(header + data):04x}")
+    
+   
 def traceroute(hostname: str, max_hops: int = 30) -> None:
+    """
+    Not Finished. 
+    """
     ttl = 0
     seq_id = 0
     destination_reached = False
     req_id = os.getpid() & 0xFFFF
     promo = socket.getprotobyname("icmp")
-    with socket.socket(socket.AF_INET, socket.SOCK_RAW, promo) as sock:
-        print(req_id, seq_id)
-        pkt_out = format_request(req_id, seq_id)
-        #sock.sendto(pkt_bytes, (addr_dst, 33434))
+    print(req_id, seq_id)
+    pkt_out = format_request(req_id, seq_id)
 
-    """
+    try:
+        parse_reply(pkt_out)
+    except ValueError as val_err:
+        print(f"Error while parsing the response: {str(val_err)}")
+    
     while ttl < max_hops and not destination_reached:
         time_sent = send_request(sock, pkt_out, dest_addr, ttl)
         destination_reached = True
         ttl += 1
-    """
+    
     pass
 
 def main():
@@ -94,11 +119,6 @@ if __name__ == "__main__":
 
 
 """
-
-def parse_reply(pkt_bytes: bytes) -> None:
-    pass
-def receive_reply(sock: socket) -> tuple:
-    pass
 """
 """
 
