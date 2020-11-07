@@ -102,7 +102,7 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
             comment = ""
             comment = resp_addr[0]
             #print(socket.gethostbyaddr(resp_addr[0])[0])
-            print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
+            #print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
             try:
                 if rtt > 1:   
                     print(f"{ttl}  " + f"{rtt:>3.0f} ms  " + f"{comment}  ", end="")
