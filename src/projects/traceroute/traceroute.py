@@ -40,8 +40,8 @@ def format_request(req_id: int, seq_num: int) -> bytes:
     return header + data
     
 def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
-    sock.sendto(pkt_bytes, (addr_dst, 33434))
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
+    sock.sendto(pkt_bytes, (addr_dst, 33434))
     return time.time()
 
 def receive_reply(sock: socket) -> tuple:
@@ -70,92 +70,52 @@ def parse_reply(pkt_bytes: bytes) -> None:
    
 def traceroute(hostname: str, max_hops: int = 30) -> None:
     """
-    Not Finished.
     Returns properly formatted Echo request 
     """
-    seq_id = 0
     destination_reached = False
-    ttl = 1
+    ttl = 0
     dest_addr = socket.gethostbyname(hostname)
     print(f"\nTracing route to {hostname} [{dest_addr}]\n" + f"over a maximum of {max_hops} hops\n")
-
-    while ttl < max_hops and not destination_reached:
-        req_id = os.getpid() & 0xFFFF
-        pkt_out = format_request(req_id, seq_id)
-        with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp")) as sock:
+    req_id = os.getpid() & 0xFFFF
+    with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp")) as sock:
+        while ttl < max_hops and not destination_reached:
+            sock.settimeout(1)
+            seq_id = 0
+            comment = ''
+            ttl += 1
+            print(f"{ttl:>3d}   ", end="")
             for _ in range(ATTEMPTS):
+                pkt_out = format_request(req_id, seq_id)
                 # Send the request to the destination host
                 time_sent = send_request(sock, pkt_out, dest_addr, ttl)
                 # Receive an ICMP reply
-                pkt_in, resp_addr, time_rcvd = receive_reply(sock)
-                rtt = (time_rcvd - time_sent) * 1000
-                # Parse the response and check for errors
-                comment = ""
-                comment = resp_addr[0] 
                 try:
-                    print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
-                except:
-                    try:    
-                        parse_reply(pkt_in)
-                    except ValueError as val_err:
-                        print(f"Error while parsing the response: {str(val_err)}")
-                        continue
+                    pkt_in, resp_addr, time_rcvd = receive_reply(sock)
+                except ValueError as val_err:
+                    comment= (comment if comment else f"Error while parsing the response: {str(val_err)}")
+                    print(f"{'!':>3s}      ", end="")
+                    continue
+                except (socket.timeout, TimeoutError) as to_err:
+                    print(f"{'*':>3s}      ", end="")
+                    comment = (comment if comment else f"Request timed out: {str(to_err)}")
+                    continue
+                seq_id += 1
+                rtt = (time_rcvd - time_sent) * 1000
+                if rtt > 1: 
                     try:
-                        if comment:
-                            if rtt > 1:  
-                                try:
-                                    print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
-                                    continue
-                                except:
-                                    print(f"{'!':>3s}      ", end="")
-                                    print(f"{'*':>3s}      ", end="")  
-                                    print(f"{'<1':>3s} ms   ", end="")
-                                    print(f"{rtt:>3.0f} ms   ", end="")
-                                    if resp_addr[0] == dest_addr:
-                                        destination_reached = True
-                        if not comment:
-                            pass
-                    except (socket.timeout, TimeoutError) as to_err:
-                        print(f"Request timed out: {str(to_err)}")
-                        continue
-        seq_id += 1
-        ttl += 1
+                        comment = (f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
+                    except:
+                        pass
+                    print(f"{rtt:>3.0f} ms   ", end="")
+                else:
+                    print(f"{'<1':>3s} ms   ", end="")
+                if not comment:
+                    parse_reply(pkt_in)
+                    comment = resp_addr[0] 
+                if resp_addr[0] == dest_addr:
+                    destination_reached = True
+            print(comment)
     print("\nTrace complete.")
-
-"""
-
-    comment = ""
-
-    comment = resp_addr[0]
-    if resp_addr[0] == dest_addr:
-
-        time_sent = send_request(sock, pkt_out, dest_addr, ttl)
-        
-        rtt = (time_rcvd - time_sent) * 1000
-        pkt_in, resp_addr, time_rcvd = receive_reply(sock)
-
-        with socket.socket(socket.AF_INET, socket.SOCK_RAW, ) as sock:
-            
-
-        sock.settimeout(1)
-    ttl = 0
-    seq_id = 0
-    destination_reached = False
-    req_id = os.getpid() & 0xFFFF
-    promo = socket.getprotobyname("icmp")
-    print(req_id, seq_id)
-    pkt_out = format_request(req_id, seq_id)
-
-    try:
-        parse_reply(pkt_out)
-    except ValueError as val_err:
-        print(f"Error while parsing the response: {str(val_err)}")
-    
-    while ttl < max_hops and not destination_reached:
-        time_sent = send_request(sock, pkt_out, dest_addr, ttl)
-        destination_reached = True
-        ttl += 1
-    """
 
 def main():
     arg_parser = argparse.ArgumentParser(description="Parse arguments")
@@ -169,7 +129,6 @@ def main():
     else:
         logger.setLevel(logging.WARNING)
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
-    #Trace the route to a domain
     traceroute(args.server)
 
 #Main function
