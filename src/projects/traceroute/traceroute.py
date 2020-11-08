@@ -40,16 +40,11 @@ def format_request(req_id: int, seq_num: int) -> bytes:
     return header + data
     
 def send_request(sock: socket, pkt_bytes: bytes, addr_dst: str, ttl: int) -> float: 
-    #`send_request`: takes *socket*, *packet bytes*, *destination address*, and *Time-to-Live* value as arguments, 
-    #sends the specified data to the address, and returns current time. 
-    #This function sets the socket's time-to-live option to the supplied value.
-    #returns current time
     sock.sendto(pkt_bytes, (addr_dst, 33434))
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
     return time.time()
 
 def receive_reply(sock: socket) -> tuple:
-    #returns a tuple of the received packet bytes, responder's address, and current time
     pkt_bytes, addr = sock.recvfrom(1024)
     return pkt_bytes, addr, time.time()
 
@@ -81,40 +76,51 @@ def traceroute(hostname: str, max_hops: int = 30) -> None:
     seq_id = 0
     destination_reached = False
     ttl = 1
+    dest_addr = socket.gethostbyname(hostname)
+    print(f"\nTracing route to {hostname} [{dest_addr}]\n" + f"over a maximum of {max_hops} hops\n")
+
     while ttl < max_hops and not destination_reached:
-        dest_addr = socket.gethostbyname(hostname)
         req_id = os.getpid() & 0xFFFF
         pkt_out = format_request(req_id, seq_id)
         with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp")) as sock:
-            
-            # Send the request to the destination host
-            time_sent = send_request(sock, pkt_out, dest_addr, ttl)
-            # Receive an ICMP reply
-            pkt_in, resp_addr, time_rcvd = receive_reply(sock)
-            # Parse the response and check for errors
-            try:
-                parse_reply(pkt_in)
-            except ValueError as val_err:
-                print(f"Error while parsing the response: {str(val_err)}")
-                continue
-            #Print the relevant statistics, if possible
-            rtt = (time_rcvd - time_sent) * 1000
-            comment = ""
-            comment = resp_addr[0]
-            #print(socket.gethostbyaddr(resp_addr[0])[0])
-            #print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
-            try:
-                if rtt > 1:   
-                    print(f"{ttl}  " + f"{rtt:>3.0f} ms  " + f"{comment}  ", end="")
-                    print('\n')
-                if rtt < 1:
-                    print(f"{'<1':>3s} ms   ", end="")
-            except (socket.timeout, TimeoutError) as to_err:
-                    print(f"Request timed out: {str(to_err)}")
-                    continue
-        #destination_reached = True
+            for _ in range(ATTEMPTS):
+                # Send the request to the destination host
+                time_sent = send_request(sock, pkt_out, dest_addr, ttl)
+                # Receive an ICMP reply
+                pkt_in, resp_addr, time_rcvd = receive_reply(sock)
+                rtt = (time_rcvd - time_sent) * 1000
+                # Parse the response and check for errors
+                comment = ""
+                comment = resp_addr[0] 
+                try:
+                    print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
+                except:
+                    try:    
+                        parse_reply(pkt_in)
+                    except ValueError as val_err:
+                        print(f"Error while parsing the response: {str(val_err)}")
+                        continue
+                    try:
+                        if comment:
+                            if rtt > 1:  
+                                try:
+                                    print(f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]")
+                                    continue
+                                except:
+                                    print(f"{'!':>3s}      ", end="")
+                                    print(f"{'*':>3s}      ", end="")  
+                                    print(f"{'<1':>3s} ms   ", end="")
+                                    print(f"{rtt:>3.0f} ms   ", end="")
+                                    if resp_addr[0] == dest_addr:
+                                        destination_reached = True
+                        if not comment:
+                            pass
+                    except (socket.timeout, TimeoutError) as to_err:
+                        print(f"Request timed out: {str(to_err)}")
+                        continue
         seq_id += 1
         ttl += 1
+    print("\nTrace complete.")
 
 """
 
@@ -168,140 +174,4 @@ def main():
 
 #Main function
 if __name__ == "__main__":
-    #for _ in range(ATTEMPTS):
     main()
-
-
-"""
-"""
-"""
-
-                            f"{socket.gethostbyaddr(resp_addr[0])[0]} [{resp_addr[0]}]"
-                        )
-                        comment
-                        comment = (
-                        comment = resp_addr[0]
-                        comment if comment else f"Request timed out: {str(to_err)}"
-                        else 
-                        if comment
-                    )
-                    )
-                    comment = (
-                    comment = (
-                    continue
-                    continue
-                    destination_reached = True
-                    except:
-                    
-                    pkt_in, resp_addr, time_rcvd = receive_reply(sock)
-                    print(f"{'!':>3s}      ", end="")
-                    print(f"{'*':>3s}      ", end="")
-                    print(f"{'<1':>3s} ms   ", end="")
-                    print(f"{rtt:>3.0f} ms   ", end="")
-                    
-                else:
-                except (socket.timeout, TimeoutError) as to_err:
-                
-                if not comment:
-                if resp_addr[0] == dest_addr:
-                if rtt > 1:
-                
-                rtt = (time_rcvd - time_sent) * 1000
-                seq_id += 1
-                
-                try:
-            + f"instead of {', '.join([str(t) for t in expected_types_and_codes])}"
-            + f"instead of {checksum(header + data):04x}"
-            comment = ""
-            f"Incorrect checksum {repl_checksum:04x} received "
-            f"Incorrect type {repl_type} received "
-            for _ in range(ATTEMPTS):
-            print(comment)
-            print(f"{ttl:>3d}   ", end="")
-            
-            
-        
-        "!BBHHH",
-        "!BBHHH",
-        "!BBHHH", header
-        )
-        )
-        + f"over a maximum of {max_hops} hops\n"
-        0,
-        checksum(header + data),
-        ECHO_REQUEST_CODE,
-        ECHO_REQUEST_CODE,
-        ECHO_REQUEST_TYPE,
-        ECHO_REQUEST_TYPE,
-        f"\nTracing route to {hostname} [{dest_addr}]\n"
-        logger.setLevel(logging.DEBUG)
-        logger.setLevel(logging.WARNING)
-        pkt_bytes += b"\00"
-        raise ValueError(
-        raise ValueError(
-        raise ValueError(f"Incorrect code {repl_code} received with type {repl_type}")
-        req_id,
-        req_id,
-        s = ((s + w) & 0xFFFF) + ((s + w) >> 16)
-        seq_num,
-        seq_num,
-        sock.settimeout(1)
-        
-        w = (pkt_bytes[i] << 8) + pkt_bytes[i + 1]
-    :param addr_dst: destination address
-    :param hostname: host name
-    :param max_hops: max hops
-    :param pkt_bytes: data received from the wire
-    :param pkt_bytes: packet bytes
-    :param pkt_bytes: packet bytes to send
-    :param req_id: request id
-    :param seq_num: sequence number
-    :param sock: socket to use
-    :param sock: socket to use
-    :param ttl: ttl of the packet
-    :returns a tuple of the received packet bytes, responder's address, and current time
-    :returns checksum as an integer
-    :returns current time
-    :returns properly formatted Echo request
-    data = b"VOTE!"
-
-    )
-    )
-    )
-    )
-    )
-    ) as sock:
-    
-    data = pkt_bytes[28:]
-    dest_addr = socket.gethostbyname(hostname)
-    Format an Echo request
-    header = pkt_bytes[20:28]
-    header = struct.pack(
-    header = struct.pack(
-        else:
-    expected_types_and_codes = {0: [0], 3: [0, 1, 3], 8: [0], 11: [0]}
-
-    if checksum(header + data) != 0:
-    if len(pkt_bytes) % 2:
-    if repl_code not in expected_types_and_codes[repl_type]:
-    if repl_type not in expected_types_and_codes:
-    
-    
-    Parse an ICMP reply
-    pkt_bytes, addr = sock.recvfrom(1024)
-    print(
-    print("\nTrace complete.")
-    Receive an ICMP reply
-    repl_type, repl_code, repl_checksum, repl_id, sequence = struct.unpack(
-    
-    
-    return header + data
-    return pkt_bytes, addr, time.time()
-    return time.time()
-    
-    Send an Ecs = 0ho Request
-    
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack("I", ttl))
-
-    with socket.socket(
-"""
