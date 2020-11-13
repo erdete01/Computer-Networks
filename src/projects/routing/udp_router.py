@@ -14,7 +14,7 @@ import toml
 from typing import Tuple, Set, Dict
 
 
-THIS_HOST = None
+THIS_HOST = "127.0.0.1"
 BASE_PORT = 4300
 
 
@@ -35,8 +35,12 @@ def format_update(routing_table: dict) -> bytes:
     :param routing_table: routing table of this router
     :returns the formatted message
     """
-    raise NotImplementedError
-
+    xs = bytearray()
+    xs.append(0)
+    for i in routing_table:
+        xs += bytearray(socket.inet_aton(i))
+        xs.append(routing_table[i][0])
+    return bytes(xs)
 
 def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
     """
@@ -47,7 +51,7 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
     :param routing_table: this router's routing table
     :returns True is the table has been updated, False otherwise
     """
-    raise NotImplementedError
+    print(msg, "This is message", neigh_addr, "This is neighbor's addr", routing_table, "This is routing table")
 
 
 def send_update(node: str) -> None:
@@ -56,7 +60,7 @@ def send_update(node: str) -> None:
     
     :param node: recipient of the update message
     """
-    raise NotImplementedError
+    pass
 
 
 def format_hello(msg_txt: str, src_node: str, dst_node: str) -> bytes:
@@ -67,7 +71,13 @@ def format_hello(msg_txt: str, src_node: str, dst_node: str) -> bytes:
     :param src_node: message originator
     :param dst_node: message recipient
     """
-    raise NotImplementedError
+    xs = bytearray()
+    xs.append(1)
+    xs += bytearray(socket.inet_aton(src_node))
+    xs += bytearray(socket.inet_aton(dst_node))
+    a = bytearray(msg_txt.encode())
+    byt_combined = xs + a
+    return bytes(byt_combined)    
 
 
 def parse_hello(msg: bytes, routing_table: dict) -> str:
@@ -78,7 +88,7 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
     :param routing_table: this router's routing table
     :returns the action taken as a string
     """
-    raise NotImplementedError
+    print(msg, routing_table)
 
 
 def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) -> None:
