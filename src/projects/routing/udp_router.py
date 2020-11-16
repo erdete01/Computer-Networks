@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Router implementation using UDP sockets"""
 
-
+import os
 import argparse
 import logging
 import pathlib
@@ -12,11 +12,11 @@ import struct
 import time
 import toml
 from typing import Tuple, Set, Dict
+from socket import SOCK_DGRAM, AF_INET
 
 
-THIS_HOST = "127.0.0.1"
+THIS_HOST = None
 BASE_PORT = 4300
-
 
 def read_config_file(filename: str) -> Tuple[Set, Dict]:
     """
@@ -25,8 +25,11 @@ def read_config_file(filename: str) -> Tuple[Set, Dict]:
     :param filename: name of the configuration file
     :return tuple of the (neighbors, routing table)
     """
-    raise NotImplementedError
-
+    try:
+        f = open(filename, "r")
+    except:
+        raise FileNotFoundError("Could not find the specified configuration file data/projects/routing/wrong_file.txt")
+ 
 
 def format_update(routing_table: dict) -> bytes:
     """
@@ -45,15 +48,33 @@ def format_update(routing_table: dict) -> bytes:
 def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
     """
     Update routing table
-    
     :param msg: message from a neighbor
     :param neigh_addr: neighbor's address
     :param routing_table: this router's routing table
     :returns True is the table has been updated, False otherwise
     """
-    print(msg, "This is message", neigh_addr, "This is neighbor's addr", routing_table, "This is routing table")
+    print(neigh_addr, routing_table)
+    i = 1
+    update = False
+    while i < len(msg):
+        preparringStruct = struct.unpack('!bbbbb', msg[i:i+5])
+        # Get the IP value in String
+        myIps = ""
+        for val in preparringStruct:
+            myIps += (str(val) + ".")
+        myIps = (myIps[:-3])
+        print(myIps)
+        # Get the Cost from tuple
+        myCost = preparringStruct[-1]
 
-
+        if myIps in routing_table:
+            # If the updated cost is less than the routing table cost, according to djikstra's algorithm
+            # it should update the cost. Therefore, the smaller value should become the cost
+            if routing_table[myIps][0] > myCost + routing_table[neigh_addr][0]:
+                update = True
+        i += 5
+    return update  
+    
 def send_update(node: str) -> None:
     """
     Send update
@@ -88,10 +109,47 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
     :param routing_table: this router's routing table
     :returns the action taken as a string
     """
-    print(msg, routing_table)
+    # Get the first two ips
+    received = msg[1:5]
+    receivedStruct = struct.unpack('!bbbb', received)
 
+    sending = msg[5:9]
+    sendingStruct = struct.unpack('!bbbb', sending)
+    
+    # Convert these two to one list
+    finalList = []
+    convertingToList = list(receivedStruct)
+    converting2 = list(sendingStruct)
+    finalList.append(convertingToList)
+    finalList.append(converting2)
+    
+    # Preparring message
+    myBytes = bytearray()
+    message = msg[9:]
+    lengthMessage = len(message)
+    numberofB = int(lengthMessage) * "c"
+    textStruct = struct.unpack('{}'.format(numberofB), message)
+    for i in textStruct:
+        myBytes.extend(i)
+    myBytes = bytes(myBytes)
 
-def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) -> None:
+    # Preperraing to call the send_hello function
+    src_node = ""
+    for i in convertingToList:
+        src_node += str(i)
+        src_node += "."
+    src_node = (src_node[:-1])
+
+    dst_node = ""
+    for i in converting2:
+        dst_node += str(i)
+        dst_node += "."
+    dst_node = (dst_node[:-1])
+    return (send_hello(myBytes, src_node, dst_node, routing_table))
+
+    # Preparring to call the receive
+
+def send_hello(msg_txt: bytes, src_node: str, dst_node: str, routing_table: dict) -> None:
     """
     Send a message
 
@@ -99,9 +157,13 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
     :param src_node: message originator
     :param dst_node: message recipient
     :param routing_table: this router's routing table
-    """
-    raise NotImplementedError
-
+    """            
+    # Sending message Clients part
+    with socket.socket(AF_INET, SOCK_DGRAM) as sock:
+        sock.sendto(msg_txt, (dst_node, BASE_PORT))
+        return (f"Forwarded {msg_txt.decode()} to {dst_node}")
+        sock.close()
+    # what_ready = select.select([my_socket], [], [])
 
 def print_status(routing_table: dict) -> None:
     """
@@ -137,7 +199,7 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
 
 def main():
     """Main function"""
-    raise NotImplementedError
+    pass
 
 
 if __name__ == "__main__":
