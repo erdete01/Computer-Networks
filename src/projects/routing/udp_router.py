@@ -27,6 +27,7 @@ def read_config_file(filename: str) -> Tuple[Set, Dict]:
     """
     try:
         f = open(filename, "r")
+        print(f.read())
     except:
         raise FileNotFoundError("Could not find the specified configuration file data/projects/routing/wrong_file.txt")
  
@@ -145,6 +146,8 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
         dst_node += str(i)
         dst_node += "."
     dst_node = (dst_node[:-1])
+
+    return 
     # return (send_hello(myBytes, src_node, dst_node, routing_table))
 
     # Preparring to call the receive
