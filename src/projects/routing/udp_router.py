@@ -145,7 +145,7 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
         dst_node += str(i)
         dst_node += "."
     dst_node = (dst_node[:-1])
-    return (send_hello(myBytes, src_node, dst_node, routing_table))
+    # return (send_hello(myBytes, src_node, dst_node, routing_table))
 
     # Preparring to call the receive
 
@@ -199,7 +199,19 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
 
 def main():
     """Main function"""
-    pass
+    print("Server here")
+    sock = socket.socket(AF_INET, SOCK_DGRAM)
+    sock.bind((host, port))
+    
+    while True:
+        msg, client = sock.recvfrom(2048)
+        msg = msg.decode()
+        if msg == "quit":
+            break
+        print(f"Received {msg}")
+        sock.sendto(msg[::-1].encode(), client)
+    sock.close()
+    print("Server is done")
 
 
 if __name__ == "__main__":
