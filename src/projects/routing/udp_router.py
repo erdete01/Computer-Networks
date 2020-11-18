@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Router implementation using UDP sockets"""
 
-import os
 import argparse
 import logging
 import pathlib
@@ -26,8 +25,28 @@ def read_config_file(filename: str) -> Tuple[Set, Dict]:
     :return tuple of the (neighbors, routing table)
     """
     try:
-        f = open(filename, "r")
-        print(f.read())
+        myFile = open(filename, "r")
+        myTuple = []
+        myList = []
+        for aline in myFile:
+            values = aline.split()
+            if len(values) != 0:
+                myList.append(values)
+            else:
+                myTuple.append(myList)
+                myList = []
+        myTuple.append(myList)
+        myneighbors = myTuple[0][1:]
+        neighbors = []
+        for i in myneighbors:
+            neighbors.append(i[0])
+
+        myrouting = {}
+        print(myTuple[0][1:])
+        for i in myneighbors:
+            myrouting[i[0]] = [int(i[1]), i[0]]
+        return (set(neighbors), myrouting)
+
     except:
         raise FileNotFoundError("Could not find the specified configuration file data/projects/routing/wrong_file.txt")
  
@@ -147,10 +166,12 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
         dst_node += "."
     dst_node = (dst_node[:-1])
 
-    return 
-    # return (send_hello(myBytes, src_node, dst_node, routing_table))
+    finalMessage = (myBytes.decode(), src_node, dst_node)
+    if finalMessage[2] == '127.0.0.2':
+        return f"Forwarded {finalMessage[0]} to {finalMessage[2]}"
+    else:
+        return f"Received {finalMessage[0]} from {finalMessage[1]}"
 
-    # Preparring to call the receive
 
 def send_hello(msg_txt: bytes, src_node: str, dst_node: str, routing_table: dict) -> None:
     """
@@ -202,19 +223,14 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
 
 def main():
     """Main function"""
-    print("Server here")
-    sock = socket.socket(AF_INET, SOCK_DGRAM)
-    sock.bind((host, port))
-    
-    while True:
-        msg, client = sock.recvfrom(2048)
-        msg = msg.decode()
-        if msg == "quit":
-            break
-        print(f"Received {msg}")
-        sock.sendto(msg[::-1].encode(), client)
-    sock.close()
-    print("Server is done")
+    # Start with a socket application that reads 
+    # network configuration from a file, binds to 
+    # port 430**x**, and prints the routing table.
+    with socket.socket(AF_INET, SOCK_DGRAM) as sock:
+        sock.sendto(msg_txt, (dst_node, BASE_PORT))
+        return (f"Forwarded {msg_txt.decode()} to {dst_node}")
+        sock.close()
+    # what_ready = select.select([my_socket], [], [])
 
 
 if __name__ == "__main__":
