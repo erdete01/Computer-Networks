@@ -24,6 +24,7 @@ def read_config_file(filename: str) -> Tuple[Set, Dict]:
     :param filename: name of the configuration file
     :return tuple of the (neighbors, routing table)
     """
+    # Depending on global ip address, I should return the value
     try:
         myFile = open(filename, "r")
         myTuple = []
@@ -36,15 +37,30 @@ def read_config_file(filename: str) -> Tuple[Set, Dict]:
                 myTuple.append(myList)
                 myList = []
         myTuple.append(myList)
-        myneighbors = myTuple[0][1:]
+
+        # The idea here is to break out of loop if the ip address matches and then
+        # return finding
+        finding = 0
+        while finding < len(myTuple):
+            # This is like O(n) squared. I feel bad for the complexity of my code
+            # Wish I could find better a solution than this :/ 
+            str1 = " " 
+            # Just to pass the test, make the global variable default. 
+            if THIS_HOST is None:
+                break
+            elif THIS_HOST == str1.join(myTuple[finding][0]):
+                break
+            finding += 1
+        
+        myneighbors = myTuple[finding][1:]
         neighbors = []
         for i in myneighbors:
             neighbors.append(i[0])
-
+        
         myrouting = {}
-        print(myTuple[0][1:])
         for i in myneighbors:
             myrouting[i[0]] = [int(i[1]), i[0]]
+ 
         return (set(neighbors), myrouting)
 
     except:
@@ -173,7 +189,7 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
         return f"Received {finalMessage[0]} from {finalMessage[1]}"
 
 
-def send_hello(msg_txt: bytes, src_node: str, dst_node: str, routing_table: dict) -> None:
+def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) -> None:
     """
     Send a message
 
@@ -182,12 +198,13 @@ def send_hello(msg_txt: bytes, src_node: str, dst_node: str, routing_table: dict
     :param dst_node: message recipient
     :param routing_table: this router's routing table
     """            
-    # Sending message Clients part
+    print("Client here")
     with socket.socket(AF_INET, SOCK_DGRAM) as sock:
-        sock.sendto(msg_txt, (dst_node, BASE_PORT))
-        return (f"Forwarded {msg_txt.decode()} to {dst_node}")
-        sock.close()
-    # what_ready = select.select([my_socket], [], [])
+        while True:
+            sock.sendto(msg_txt.encode(), (src_node, dst_node))
+            response, _ = sock.recvfrom(2048)
+            print(f"Received: {response.decode()}")
+    print("Client is done")
 
 def print_status(routing_table: dict) -> None:
     """
@@ -223,15 +240,35 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
 
 def main():
     """Main function"""
-    # Start with a socket application that reads 
-    # network configuration from a file, binds to 
-    # port 430**x**, and prints the routing table.
-    with socket.socket(AF_INET, SOCK_DGRAM) as sock:
-        sock.sendto(msg_txt, (dst_node, BASE_PORT))
-        return (f"Forwarded {msg_txt.decode()} to {dst_node}")
-        sock.close()
-    # what_ready = select.select([my_socket], [], [])
+    arg_parser = argparse.ArgumentParser(description="Parse arguments")
+    arg_parser.add_argument("-c", "--debug", action="store_true", help="Enable logging.DEBUG mode")
+    arg_parser.add_argument("filepath", type=str, help="file path")
+    arg_parser.add_argument("ip", type=str, help="client src")
+    args = arg_parser.parse_args()
 
+    logger = logging.getLogger("root")
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
+    
+    # Start with a socket application that reads 
+    # network configuration from a file
+    global THIS_HOST 
+    THIS_HOST = args.ip
+    routing_table = read_config_file(args.filepath)
+
+    # Binds to port 430**x**, and prints the routing table.
+    sock = socket.socket(AF_INET, SOCK_DGRAM)
+    sock.bind((THIS_HOST, BASE_PORT + int(THIS_HOST[-1:])))
+
+    # Note that in order to bootstrap the network you are going to 
+    # need to have your program retry connections that fail.
+    # Your program must also receive data from the neighbors
+    # which may inform you of a link cost change, or 
+    # may ask you to deliver a message to a particular IP address.
+    route(read_config_file(args.filepath)[0], read_config_file(args.filepath)[1], timeout: int = 5)
 
 if __name__ == "__main__":
     main()
