@@ -111,7 +111,7 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
         i += 5
     return update  
     
-def send_update(node: str) -> None:
+def send_update(routing_table: dict, node: str) -> None:
     """
     Send update
     
@@ -200,10 +200,8 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
     """            
     print("Client here")
     with socket.socket(AF_INET, SOCK_DGRAM) as sock:
-        while True:
-            sock.sendto(msg_txt.encode(), (src_node, dst_node))
-            response, _ = sock.recvfrom(2048)
-            print(f"Received: {response.decode()}")
+        msg_bytes = format_hello(msg_txt, src_node, dst_node)
+        sock.sendto(msg_bytes, (dst_node, BASE_PORT))
     print("Client is done")
 
 def print_status(routing_table: dict) -> None:
@@ -235,7 +233,36 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
         "Yakkety Yak",
         "Xenial Xerus",
     ]
-    raise NotImplementedError
+    # Start with a socket application that reads 
+    # network configuration from a file
+    # Binds to port 430**x**, and prints the routing table.
+    sock = socket.socket(AF_INET, SOCK_DGRAM)
+    global BASE_PORT
+    BASE_PORT = BASE_PORT + int(THIS_HOST[-1:])
+    sock.bind((THIS_HOST, BASE_PORT))
+
+    # Send Hello and Update to each of router instances. 
+    # If the router does not get a Hello response, 
+    # it will resend the hello message after couple of seconds
+
+    for i in neighbors:
+        send_hello(random.choice(ubuntu_release), THIS_HOST, i, routing_table)
+        msg, client = sock.recvfrom(2048)
+        # print(msg, client,"idk")
+    # """Receive an Echo reply"""
+    # print("Incoming IP")
+    # while True:
+    #     time_left = 5
+    #     started_select = time.time()
+    #     what_ready = select.select([sock], [], [])
+    #     how_long_in_select = time.time() - started_select
+    #     print(what_ready)
+    #     if what_ready[0] == []:  # Timeout
+    #         raise TimeoutError("Request timed out after 1 sec")
+    #     time_rcvd = time.time()
+    #     pkt_rcvd, addr = sock.recvfrom(1024)
+    #     print(pkt_rcvd, addr)
+    #     break
 
 
 def main():
@@ -253,22 +280,9 @@ def main():
         logger.setLevel(logging.WARNING)
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logger.level)
     
-    # Start with a socket application that reads 
-    # network configuration from a file
     global THIS_HOST 
     THIS_HOST = args.ip
-    routing_table = read_config_file(args.filepath)
-
-    # Binds to port 430**x**, and prints the routing table.
-    sock = socket.socket(AF_INET, SOCK_DGRAM)
-    sock.bind((THIS_HOST, BASE_PORT + int(THIS_HOST[-1:])))
-
-    # Note that in order to bootstrap the network you are going to 
-    # need to have your program retry connections that fail.
-    # Your program must also receive data from the neighbors
-    # which may inform you of a link cost change, or 
-    # may ask you to deliver a message to a particular IP address.
-    route(read_config_file(args.filepath)[0], read_config_file(args.filepath)[1], timeout: int = 5)
+    route(read_config_file(args.filepath)[0], read_config_file(args.filepath)[1], timeout=5)
 
 if __name__ == "__main__":
     main()
