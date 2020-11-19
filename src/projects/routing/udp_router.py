@@ -12,7 +12,7 @@ import time
 import toml
 from typing import Tuple, Set, Dict
 from socket import SOCK_DGRAM, AF_INET
-
+import queue
 
 THIS_HOST = None
 BASE_PORT = 4300
@@ -114,10 +114,12 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
 def send_update(routing_table: dict, node: str) -> None:
     """
     Send update
-    
     :param node: recipient of the update message
     """
-    pass
+    # msg = format_update(routing_table)
+    # witch socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+    #     sock.bind((THIS_HOST, BASE_PORT))
+    #     sock.sendto(msg, (node, port))
 
 
 def format_hello(msg_txt: str, src_node: str, dst_node: str) -> bytes:
@@ -198,11 +200,11 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
     :param dst_node: message recipient
     :param routing_table: this router's routing table
     """            
-    print("Client here")
     with socket.socket(AF_INET, SOCK_DGRAM) as sock:
         msg_bytes = format_hello(msg_txt, src_node, dst_node)
-        sock.sendto(msg_bytes, (dst_node, BASE_PORT))
-    print("Client is done")
+        BASE_P = 4300
+        BASE_P = BASE_P + int(dst_node[-1:])
+        sock.sendto(msg_bytes, (dst_node, BASE_P))
 
 def print_status(routing_table: dict) -> None:
     """
@@ -214,6 +216,7 @@ def print_status(routing_table: dict) -> None:
 
 
 def route(neighbors: set, routing_table: dict, timeout: int = 5):
+    print(neighbors, routing_table)
     """
     Router's main loop
 
@@ -239,30 +242,22 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
     sock = socket.socket(AF_INET, SOCK_DGRAM)
     global BASE_PORT
     BASE_PORT = BASE_PORT + int(THIS_HOST[-1:])
+    print(BASE_PORT)
     sock.bind((THIS_HOST, BASE_PORT))
-
+    
     # Send Hello and Update to each of router instances. 
     # If the router does not get a Hello response, 
     # it will resend the hello message after couple of seconds
-
-    for i in neighbors:
-        send_hello(random.choice(ubuntu_release), THIS_HOST, i, routing_table)
-        msg, client = sock.recvfrom(2048)
-        # print(msg, client,"idk")
-    # """Receive an Echo reply"""
-    # print("Incoming IP")
-    # while True:
-    #     time_left = 5
-    #     started_select = time.time()
-    #     what_ready = select.select([sock], [], [])
-    #     how_long_in_select = time.time() - started_select
-    #     print(what_ready)
-    #     if what_ready[0] == []:  # Timeout
-    #         raise TimeoutError("Request timed out after 1 sec")
-    #     time_rcvd = time.time()
-    #     pkt_rcvd, addr = sock.recvfrom(1024)
-    #     print(pkt_rcvd, addr)
-    #     break
+    inputs = [sock]
+    while inputs:
+        read_from, write_to, err = select.select(inputs, [], [], timeout)
+        if random.randint(0,10) < 3:
+            send_hello(random.choice(ubuntu_release), THIS_HOST, random.choice(list(neighbors)), routing_table)
+            """Receive an Echo reply"""
+        # other 50% chance it will call this function
+        for r in read_from:
+            pkt_rcvd, addr = sock.recvfrom(1024)
+            
 
 
 def main():
