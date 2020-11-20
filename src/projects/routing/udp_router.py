@@ -109,12 +109,14 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
             # else dist[v] = dist[u] + weight of edge uv
             # it should update the cost. Therefore, the smaller value should become the cost
             if routing_table[myIps][0] > myCost + routing_table[neigh_addr][0]:
+                # Update the routing table if changed
+                routing_table[myIps] = [int(myCost) + routing_table[neigh_addr][0], routing_table[neigh_addr][1]]
                 update = True
         # Dealing with KeyError 
         elif myIps == THIS_HOST:
             continue
         else:
-            routing_table[myIps] = [int(myCost), routing_table[neigh_addr][1]]
+            routing_table[myIps] = [int(myCost) + routing_table[neigh_addr][0], routing_table[neigh_addr][1]]
             update = True
     return update  
     
@@ -218,6 +220,7 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
         BASE_P = 4300
         BASE_P = BASE_P + int(dst_node[-1])
         # Should send hello to the shortest distance 
+        print(f"Forwarded {msg_bytes} to {routing_table.get(dst_node)[1]}")
         sock.sendto(msg_bytes, (routing_table.get(dst_node)[1], BASE_P))
     # print("Client closed")
 
@@ -271,16 +274,17 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
     # it will resend the hello message after couple of seconds
     inputs = [sock]
     time.sleep(random.randint(1, 4))
+    #Send UPDATE message to all neighbors on boot 
     for i in neighbors:
         send_update(routing_table, i)
-
+    print_status(routing_table)
     while inputs:
         read_from, write_to, err = select.select(inputs, [], [], timeout)
-        if random.randint(0,2) < 1:
+        if random.randint(0,100) < 10:
             time.sleep(random.randint(1, 4))
             send_hello(random.choice(ubuntu_release), THIS_HOST, str(random.choice(list(neighbors))), routing_table)
-            print_status(routing_table)
-        # other 50% chance it will start the server, 50% sends Hello
+            time.sleep(random.randint(1, 4))
+        # other 10% chance it will send hello, 90% initiate the server
         else:
             # print("Initiated the service")
             for r in read_from:
@@ -288,15 +292,16 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
                 if pkt_rcvd:
                     message_type = pkt_rcvd[0]
                     if message_type == 1:
-                        print(parse_hello(pkt_rcvd, routing_table))  
+                        print(parse_hello(pkt_rcvd, routing_table)) 
+                        # print_status(routing_table) 
                     elif message_type == 0:
                         time.sleep(random.randint(1, 4))
                         updated = parse_update(pkt_rcvd, addr[0], routing_table)
-                        # send updates to all ur neighbors
-                        if updated:
-                            # print("i am updated")
-                            for i in neighbors:
-                                send_update(routing_table, i)
+                        # Send update to all neighbors occasionally
+                        for i in neighbors:
+                            send_update(routing_table, addr[0])
+                        print_status(routing_table)
+                        time.sleep(random.randint(1, 4))
                     else:
                         print("Unexpected Message")
     sock.close()
