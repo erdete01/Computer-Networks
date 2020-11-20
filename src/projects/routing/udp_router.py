@@ -110,6 +110,7 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
             # it should update the cost. Therefore, the smaller value should become the cost
             if routing_table[myIps][0] > myCost + routing_table[neigh_addr][0]:
                 update = True
+        # Dealing with KeyError 
         elif myIps == THIS_HOST:
             continue
         else:
@@ -125,7 +126,7 @@ def send_update(routing_table: dict, node: str) -> None:
     msg = format_update(routing_table)
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind((THIS_HOST, BASE_PORT))
-        sock.sendto(msg, (node, port))
+        sock.sendto(msg, (node, BASE_PORT + int(node[-1])))
 
 
 def format_hello(msg_txt: str, src_node: str, dst_node: str) -> bytes:
@@ -191,11 +192,12 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
     dst_node = (dst_node[:-1])
 
     finalMessage = (myBytes.decode(), src_node, dst_node)
-    print(dst_node, THIS_HOST)
+    # print(dst_node, THIS_HOST)
 
     if THIS_HOST == dst_node:
         return f"Received {finalMessage[0]} from {finalMessage[1]}"
     else:
+        # idk why its not forwarding
         send_hello(finalMessage[0], finalMessage[1], finalMessage[2], routing_table)
         return f"Forwarded {finalMessage[0]} to {finalMessage[2]}"
     
@@ -261,18 +263,15 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
     # network configuration from a file
     # Binds to port 430**x**, and prints the routing table.
     sock = socket.socket(AF_INET, SOCK_DGRAM)
-    global BASE_PORT
-    BASE_PORT = BASE_PORT + int(THIS_HOST[-1:])
-    # print(BASE_PORT)
-    sock.bind((THIS_HOST, BASE_PORT))
+    sock.bind((THIS_HOST, BASE_PORT + int(THIS_HOST[-1])))
 
     # Send Hello and Update to each of router instances. 
     # If the router does not get a Hello response, 
     # it will resend the hello message after couple of seconds
     inputs = [sock]
     time.sleep(random.randint(1, 4))
-    for r in neighbors:
-        send_update(routing_table, r)
+    for i in neighbors:
+        send_update(routing_table, i)
 
     while inputs:
         read_from, write_to, err = select.select(inputs, [], [], timeout)
@@ -280,7 +279,7 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
             time.sleep(random.randint(1, 4))
             send_hello(random.choice(ubuntu_release), THIS_HOST, str(random.choice(list(neighbors))), routing_table)
             print_status(routing_table)
-        # other 50% chance it will call this function
+        # other 50% chance it will start the server, 50% sends Hello
         else:
             # print("Initiated the service")
             for r in read_from:
@@ -288,15 +287,15 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
                 if pkt_rcvd:
                     message_type = pkt_rcvd[0]
                     if message_type == 1:
-                        print(parse_hello(pkt_rcvd, routing_table))
+                        print(parse_hello(pkt_rcvd, routing_table))  
                     elif message_type == 0:
                         time.sleep(random.randint(1, 4))
-                        updated = parse_update(pkt_rcvd, addr[0], routing_table)
+                        update_vector = parse_update(pkt_rcvd, addr[0], routing_table)
                         # send updates to all ur neighbors
-                        
                         send_update(routing_table, addr[0])
                     else:
                         print("Unexpected Message")
+
 
 def main():
     """Main function"""
