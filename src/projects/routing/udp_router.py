@@ -12,7 +12,6 @@ import time
 import toml
 from typing import Tuple, Set, Dict
 from socket import SOCK_DGRAM, AF_INET
-import queue
 
 THIS_HOST = None
 BASE_PORT = 4300
@@ -88,8 +87,8 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
     :param neigh_addr: neighbor's address
     :param routing_table: this router's routing table
     :returns True is the table has been updated, False otherwise
-    """
-    print(neigh_addr, routing_table)
+    # """
+    # print(neigh_addr, routing_table)
     i = 1
     update = False
     while i < len(msg):
@@ -99,16 +98,23 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
         for val in preparringStruct:
             myIps += (str(val) + ".")
         myIps = (myIps[:-3])
-        print(myIps)
+        # print(myIps)
         # Get the Cost from tuple
         myCost = preparringStruct[-1]
-
+        # print(myIps)
+        i += 5
         if myIps in routing_table:
-            # If the updated cost is less than the routing table cost, according to djikstra's algorithm
+            # If the updated cost is less than the routing table cost, according to bellman ford algorithm
+            # If dist[v] > dist[u] + weight of edge uv, then update dist[v]
+            # else dist[v] = dist[u] + weight of edge uv
             # it should update the cost. Therefore, the smaller value should become the cost
             if routing_table[myIps][0] > myCost + routing_table[neigh_addr][0]:
                 update = True
-        i += 5
+        elif myIps == THIS_HOST:
+            continue
+        else:
+            routing_table[myIps] = [int(myCost), routing_table[neigh_addr][1]]
+            update = True
     return update  
     
 def send_update(routing_table: dict, node: str) -> None:
@@ -116,10 +122,10 @@ def send_update(routing_table: dict, node: str) -> None:
     Send update
     :param node: recipient of the update message
     """
-    # msg = format_update(routing_table)
-    # witch socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-    #     sock.bind((THIS_HOST, BASE_PORT))
-    #     sock.sendto(msg, (node, port))
+    msg = format_update(routing_table)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.bind((THIS_HOST, BASE_PORT))
+        sock.sendto(msg, (node, port))
 
 
 def format_hello(msg_txt: str, src_node: str, dst_node: str) -> bytes:
@@ -185,11 +191,14 @@ def parse_hello(msg: bytes, routing_table: dict) -> str:
     dst_node = (dst_node[:-1])
 
     finalMessage = (myBytes.decode(), src_node, dst_node)
-    if finalMessage[2] == '127.0.0.2':
-        return f"Forwarded {finalMessage[0]} to {finalMessage[2]}"
-    else:
-        return f"Received {finalMessage[0]} from {finalMessage[1]}"
+    print(dst_node, THIS_HOST)
 
+    if THIS_HOST == dst_node:
+        return f"Received {finalMessage[0]} from {finalMessage[1]}"
+    else:
+        send_hello(finalMessage[0], finalMessage[1], finalMessage[2], routing_table)
+        return f"Forwarded {finalMessage[0]} to {finalMessage[2]}"
+    
 
 def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) -> None:
     """
@@ -199,24 +208,36 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
     :param src_node: message originator
     :param dst_node: message recipient
     :param routing_table: this router's routing table
-    """            
+    """  
+    # print('Client started')    
+    # Should send hello to the shortest distance      
     with socket.socket(AF_INET, SOCK_DGRAM) as sock:
         msg_bytes = format_hello(msg_txt, src_node, dst_node)
         BASE_P = 4300
-        BASE_P = BASE_P + int(dst_node[-1:])
-        sock.sendto(msg_bytes, (dst_node, BASE_P))
+        BASE_P = BASE_P + int(dst_node[-1])
+        sock.sendto(msg_bytes, (routing_table.get(dst_node)[1], BASE_P))
+    # print("Client closed")
 
 def print_status(routing_table: dict) -> None:
     """
     Print status
 
     :param routing_table: this router's routing table
+    * Print current routing table.
+    * The function must print the current routing table in a 
+    human-readable format (rows, columns, spacing).
     """
-    raise NotImplementedError
+    a = '   Host     '
+    b = 'Cost     '
+    c = 'From'
+    print(a, b, c)
+    for r in routing_table:
+        print( r, "  " , " ", routing_table[r][0], "   ", routing_table[r][1])
+    print('\n')
 
 
 def route(neighbors: set, routing_table: dict, timeout: int = 5):
-    print(neighbors, routing_table)
+    # print(neighbors, routing_table)
     """
     Router's main loop
 
@@ -242,23 +263,40 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
     sock = socket.socket(AF_INET, SOCK_DGRAM)
     global BASE_PORT
     BASE_PORT = BASE_PORT + int(THIS_HOST[-1:])
-    print(BASE_PORT)
+    # print(BASE_PORT)
     sock.bind((THIS_HOST, BASE_PORT))
-    
+
     # Send Hello and Update to each of router instances. 
     # If the router does not get a Hello response, 
     # it will resend the hello message after couple of seconds
     inputs = [sock]
+    time.sleep(random.randint(1, 4))
+    for r in neighbors:
+        send_update(routing_table, r)
+
     while inputs:
         read_from, write_to, err = select.select(inputs, [], [], timeout)
-        if random.randint(0,10) < 3:
-            send_hello(random.choice(ubuntu_release), THIS_HOST, random.choice(list(neighbors)), routing_table)
-            """Receive an Echo reply"""
+        if random.randint(0,2) < 1:
+            time.sleep(random.randint(1, 4))
+            send_hello(random.choice(ubuntu_release), THIS_HOST, str(random.choice(list(neighbors))), routing_table)
+            print_status(routing_table)
         # other 50% chance it will call this function
-        for r in read_from:
-            pkt_rcvd, addr = sock.recvfrom(1024)
-            
-
+        else:
+            # print("Initiated the service")
+            for r in read_from:
+                pkt_rcvd, addr = sock.recvfrom(1024)
+                if pkt_rcvd:
+                    message_type = pkt_rcvd[0]
+                    if message_type == 1:
+                        print(parse_hello(pkt_rcvd, routing_table))
+                    elif message_type == 0:
+                        time.sleep(random.randint(1, 4))
+                        updated = parse_update(pkt_rcvd, addr[0], routing_table)
+                        # send updates to all ur neighbors
+                        
+                        send_update(routing_table, addr[0])
+                    else:
+                        print("Unexpected Message")
 
 def main():
     """Main function"""
