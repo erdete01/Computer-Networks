@@ -211,12 +211,13 @@ def send_hello(msg_txt: str, src_node: str, dst_node: str, routing_table: dict) 
     :param dst_node: message recipient
     :param routing_table: this router's routing table
     """  
-    # print('Client started')    
-    # Should send hello to the shortest distance      
+    # print('Client started')         
     with socket.socket(AF_INET, SOCK_DGRAM) as sock:
+        sock.bind((THIS_HOST, BASE_PORT))
         msg_bytes = format_hello(msg_txt, src_node, dst_node)
         BASE_P = 4300
         BASE_P = BASE_P + int(dst_node[-1])
+        # Should send hello to the shortest distance 
         sock.sendto(msg_bytes, (routing_table.get(dst_node)[1], BASE_P))
     # print("Client closed")
 
@@ -290,11 +291,15 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
                         print(parse_hello(pkt_rcvd, routing_table))  
                     elif message_type == 0:
                         time.sleep(random.randint(1, 4))
-                        update_vector = parse_update(pkt_rcvd, addr[0], routing_table)
+                        updated = parse_update(pkt_rcvd, addr[0], routing_table)
                         # send updates to all ur neighbors
-                        send_update(routing_table, addr[0])
+                        if updated:
+                            # print("i am updated")
+                            for i in neighbors:
+                                send_update(routing_table, i)
                     else:
                         print("Unexpected Message")
+    sock.close()
 
 
 def main():
