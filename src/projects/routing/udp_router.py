@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+# author: Temuulen Erdenebulgan
+# description: It sends Hello message and then receives the text
+#              It also updates the routing table
+#              But, it doesn't update all routing tables. 
+# !/usr/bin/env python3
 """Router implementation using UDP sockets"""
 
 import argparse
@@ -110,6 +114,7 @@ def parse_update(msg: bytes, neigh_addr: str, routing_table: dict) -> bool:
             # it should update the cost. Therefore, the smaller value should become the cost
             if routing_table[myIps][0] > myCost + routing_table[neigh_addr][0]:
                 # Update the routing table if changed
+                print("Updating router table")
                 routing_table[myIps] = [int(myCost) + routing_table[neigh_addr][0], routing_table[neigh_addr][1]]
                 update = True
         # Dealing with KeyError 
@@ -292,14 +297,14 @@ def route(neighbors: set, routing_table: dict, timeout: int = 5):
                 if pkt_rcvd:
                     message_type = pkt_rcvd[0]
                     if message_type == 1:
-                        print(parse_hello(pkt_rcvd, routing_table)) 
-                        # print_status(routing_table) 
+                        print(parse_hello(pkt_rcvd, routing_table))
                     elif message_type == 0:
                         time.sleep(random.randint(1, 4))
                         updated = parse_update(pkt_rcvd, addr[0], routing_table)
                         # Send update to all neighbors occasionally
                         for i in neighbors:
-                            send_update(routing_table, addr[0])
+                            # I am not sure if my routing_table is updated here
+                            send_update(routing_table, i)
                         print_status(routing_table)
                         time.sleep(random.randint(1, 4))
                     else:
